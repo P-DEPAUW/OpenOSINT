@@ -5,6 +5,8 @@ handlers/policies used by the agent and the ordinary command line.
 """
 from __future__ import annotations
 
+import json
+import os
 import shutil
 from pathlib import Path
 from typing import Any
@@ -22,6 +24,7 @@ from rich.panel import Panel
 from openosint.config_store import read_config, write_config
 from openosint.image_search import prepare_image_search
 from openosint.mcp_server import call_tool, list_tools
+from openosint.tool_policy import ENV_ALLOW_ACTIVE
 
 # Semantic colors: keep all themes OLED black with a dark selected row.
 PALETTES = {
@@ -38,6 +41,7 @@ MAIN_ITEMS = (
 # Only pre-existing, registered handlers. Passive mode is always checked by MCP.
 TOOL_ITEMS = (
     ("image", "Foto: zoekmogelijkheden"),
+    ("search_lens", "Google Lens: echte matches (openbare foto-URL)"),
     ("search_certificates", "Certificaten / subdomeinen"),
     ("search_archive", "Webarchief"),
     ("search_github", "GitHub-profiel"),
@@ -52,6 +56,7 @@ INPUT_KEYS = {
     "search_github": "query", "search_dns": "domain", "search_rdap": "domain",
     "search_ip": "ip", "search_greynoise": "ip", "file_metadata": "path",
     "generate_dorks": "target",
+    "search_lens": "image_url",
 }
 
 
@@ -165,9 +170,56 @@ async def _run_tool(name: str, value: str) -> tuple[str, bool]:
         return ("Foto gecontroleerd. Zoekpagina's beschikbaar (nog geen reverse-imagezoekopdracht uitgevoerd):\n" + providers), False
     if name not in INPUT_KEYS:
         return "Onbekende tool; niets uitgevoerd.", True
-    answer = await call_tool(name, {INPUT_KEYS[name]: value})
+    if name == "search_lens":
+        # This is reached only after the user explicitly confirms sending the
+        # public image URL. Turn on active policy for this ONE tool invocation.
+        old_value = os.environ.get(ENV_ALLOW_ACTIVE)
+        os.environ[ENV_ALLOW_ACTIVE] = "1"
+        try:
+            answer = await call_tool(name, {INPUT_KEYS[name]: value})
+        finally:
+            if old_value is None:
+                os.environ.pop(ENV_ALLOW_ACTIVE, None)
+            else:
+                os.environ[ENV_ALLOW_ACTIVE] = old_value
+    else:
+        answer = await call_tool(name, {INPUT_KEYS[name]: value})
     chunks = [getattr(c, "text", "") for c in answer.content]
-    return "\n".join(chunks), bool(answer.isError)
+    raw = "\n".join(chunks)
+    if name == "search_lens" and not answer.isError:
+        # Some providers return an HTTP/JSON error as plain tool text.
+        try:
+            data = json.loads(raw)
+        except (TypeError, ValueError):
+            return raw, True
+        return raw, not (isinstance(data, dict) and data.get("source") == "SerpApi Google Lens" and isinstance(data.get("matches"), list))
+    return raw, bool(answer.isError)
+
+
+def _lens_brief(raw: str) -> str:
+    """Present a short readable result, leaving raw evidence untouched."""
+    try:
+        data = json.loads(raw)
+    except (TypeError, ValueError):
+        return raw
+    if not isinstance(data, dict) or data.get("source") != "SerpApi Google Lens":
+        return raw
+    matches = data.get("matches", [])
+    if not isinstance(matches, list):
+        return raw
+    lines = [f"Google Lens: {len(matches)} visuele matches (geen identiteitsbewijs)."]
+    for i, entry in enumerate(matches[:5], start=1):
+        if not isinstance(entry, dict):
+            continue
+        title = str(entry.get("title", "Geen titel")).strip()[:90]
+        source = str(entry.get("source", "")).strip()[:60]
+        url = str(entry.get("link", "")).strip()[:300]
+        lines.append(f"{i}. {title}" + (f" · {source}" if source else ""))
+        if url.startswith(("https://", "http://")):
+            lines.append(f"   {url}")
+    if len(matches) > 5:
+        lines.append(f"Nog {len(matches) - 5} matches via 'Volledig resultaat'.")
+    return "\n".join(lines)
 
 
 async def run_local_menu() -> None:
@@ -223,14 +275,23 @@ async def run_local_menu() -> None:
             console.print("[#C2A674]Deze route bereidt alleen zoeklinks voor; geen accounts of personen zijn geverifieerd.[/]")
         else:
             continue
-        label = "Foto (pad of HTTPS-link)" if name == "image" else ("Bestand" if name == "file_metadata" else "Onderzoekwaarde")
+        label = ("Publieke HTTPS-foto-URL" if name == "search_lens" else
+                 "Foto (pad of HTTPS-link)" if name == "image" else
+                 "Bestand" if name == "file_metadata" else "Onderzoekwaarde")
         value = await _prompt_value(prompt, label)
         if value is None:
             continue
+        if name == "search_lens":
+            console.print("[#C2A674]SerpApi ontvangt deze OPENBARE foto-URL. Lokale foto's worden niet geüpload.[/]")
+            agreed = await _choose((("go", "Verstuur URL en zoek met SerpApi"),
+                                     ("back", "Terug zonder zoeken")), prefs)
+            if agreed != "go":
+                continue
         console.print("[#9A9FB4]Onderzoek gestart; status volgt uit de echte bron.[/]")
         full, failure = await _run_tool(name, value)
         last_full = f"Tool: {name}\nOnderzocht: {value}\n\n{full}"
-        _render(console, full, error=failure)
+        visible = _lens_brief(full) if name == "search_lens" and not failure else full
+        _render(console, visible, error=failure)
         while True:
             choice = await _choose((("back", "Terug"), ("full", "Volledig resultaat"), ("save", "Bewaar rapport")), prefs)
             if choice in (None, "back"):

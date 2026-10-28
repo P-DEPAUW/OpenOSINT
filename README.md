@@ -1073,3 +1073,5 @@ OpenOSINT is open source under the [MIT License](./LICENSE) — free for any use
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=OpenOSINT/OpenOSINT&type=Date)](https://star-history.com/#OpenOSINT/OpenOSINT&Date)
+
+Mac keyless menu: **Tools kiezen → Google Lens** accepts a public HTTPS image URL. It requests explicit consent before SerpApi fetches the image; the full response can be saved unshortened. Local photo paths remain manual-only (no automatic upload).
