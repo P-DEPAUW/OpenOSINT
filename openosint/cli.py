@@ -1193,6 +1193,21 @@ async def _async_main() -> None:
     if proxy_url:
         print(f"[*] Upstream proxy active: {redact_proxy_url(proxy_url)}", file=sys.stderr)
 
+    # On an interactive Mac without a paid AI key, launch the existing tools
+    # through a local keyboard menu instead of an unusable API-key error.
+    # Explicit AI providers/API-key sessions and all direct CLI commands
+    # retain their original behavior.
+    if (
+        args.command in (None, "shell")
+        and getattr(args, "provider", "anthropic") == "anthropic"
+        and not (getattr(args, "api_key", None) or os.environ.get("ANTHROPIC_API_KEY"))
+        and sys.stdin.isatty()
+    ):
+        from openosint.local_menu import run_local_menu
+
+        await run_local_menu()
+        return
+
     # No subcommand or explicit 'shell' → launch REPL.
     # Await directly — run_repl() is a sync wrapper that calls asyncio.run()
     # internally, which raises RuntimeError when called from a running event loop.
