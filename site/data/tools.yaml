@@ -65,3 +65,23 @@ scrape_url:
 search_footprint:
   method: Bright Data SERP API
   finds: Entity-type-aware SERP footprint + correlation graph
+search_certificates:
+  method: SSLMate Cert Spotter / crt.sh
+  finds: Historical certificate subdomains from public CT logs
+search_archive:
+  method: Internet Archive Wayback
+  finds: Archived URLs or nearest known snapshot
+search_greynoise:
+  method: GreyNoise Community API
+  finds: IP internet noise and RIOT reputation (limited free tier)
+file_metadata:
+  method: ExifTool (local, read-only)
+  finds: Local media or PDF EXIF, camera, dates, GPS (sensitive)
+  binary: exiftool
+search_lens:
+  method: SerpApi Google Lens (opt-in)
+  finds: Similar-image links from a public HTTPS image URL; account key needed
+scan_host_ports:
+  method: Nmap (active, opt-in)
+  finds: Authorized TCP service check on five common ports only
+  binary: nmap

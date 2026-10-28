@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tools reference: 21 OSINT tools | OpenOSINT</title>
-<meta name="description" content="Reference for all 21 OpenOSINT tools: what each finds, its noise level, the API key or binary it needs, and example output.">
+<title>Tools reference: 27 OSINT tools | OpenOSINT</title>
+<meta name="description" content="Reference for all 27 OpenOSINT tools: what each finds, its noise level, the API key or binary it needs, and example output.">
 <link rel="canonical" href="https://openosint.tech/tools/">
 <meta name="theme-color" content="#16181b">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
@@ -15,16 +15,16 @@
 <link rel="stylesheet" href="/style.css">
 <meta property="og:site_name" content="OpenOSINT">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Tools reference: 21 OSINT tools | OpenOSINT">
-<meta property="og:description" content="Reference for all 21 OpenOSINT tools: what each finds, its noise level, the API key or binary it needs, and example output.">
+<meta property="og:title" content="Tools reference: 27 OSINT tools | OpenOSINT">
+<meta property="og:description" content="Reference for all 27 OpenOSINT tools: what each finds, its noise level, the API key or binary it needs, and example output.">
 <meta property="og:url" content="https://openosint.tech/tools/">
 <meta property="og:image" content="https://openosint.tech/assets/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="OpenOSINT: open-source engine for passive checks of public information">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Tools reference: 21 OSINT tools | OpenOSINT">
-<meta name="twitter:description" content="Reference for all 21 OpenOSINT tools: what each finds, its noise level, the API key or binary it needs, and example output.">
+<meta name="twitter:title" content="Tools reference: 27 OSINT tools | OpenOSINT">
+<meta name="twitter:description" content="Reference for all 27 OpenOSINT tools: what each finds, its noise level, the API key or binary it needs, and example output.">
 <meta name="twitter:image" content="https://openosint.tech/assets/og.png">
 <script type="application/ld+json">
 {
@@ -144,11 +144,17 @@
         </ol>
       </nav>
       <h1>Tools reference</h1>
-      <p class="lead">OpenOSINT ships 21 investigation tools. Each one wraps an external API, a binary or a local computation. They are available through the <a href="/docs/quickstart/">CLI and REPL</a>, the <a href="/docs/mcp/">MCP server</a> and the <a href="/docs/web-ui/">web UI</a>. The Source, Noise and Needs columns are generated from the code, so they match the version you install.</p>
+      <p class="lead">OpenOSINT ships 27 investigation tools. Each one wraps an external API, a binary or a local computation. They are available through the <a href="/docs/quickstart/">CLI and REPL</a>, the <a href="/docs/mcp/">MCP server</a> and the <a href="/docs/web-ui/">web UI</a>. The Source, Noise and Needs columns are generated from the code, so they match the version you install.</p>
 <p>Noise levels (<a href="/docs/safety/">what they mean</a>): passive tools are on by default; tools that touch the target or are noisy need <code>--allow-active</code>.</p>
 
 <div class="table-wrap" tabindex="0" role="region" aria-label="Table"><table>
 <tr><th>Tool</th><th>Source</th><th>What it finds</th><th>Noise</th><th>Needs</th></tr>
+<tr><td><a href="#search_greynoise"><code>search_greynoise</code></a></td><td>GreyNoise Community API</td><td>IP internet noise and RIOT reputation (limited free tier)</td><td>passive</td><td class="needs">&mdash;</td></tr>
+<tr><td><a href="#file_metadata"><code>file_metadata</code></a></td><td>ExifTool (local, read-only)</td><td>Local media or PDF EXIF, camera, dates, GPS (sensitive)</td><td>passive</td><td class="needs"><code>exiftool</code> on PATH</td></tr>
+<tr><td><a href="#search_certificates"><code>search_certificates</code></a></td><td>SSLMate Cert Spotter / crt.sh</td><td>Historical certificate subdomains from public CT logs</td><td>passive</td><td class="needs">&mdash;</td></tr>
+<tr><td><a href="#search_archive"><code>search_archive</code></a></td><td>Internet Archive Wayback</td><td>Archived URLs or nearest known snapshot</td><td>passive</td><td class="needs">&mdash;</td></tr>
+<tr><td><a href="#search_lens"><code>search_lens</code></a></td><td>SerpApi Google Lens (opt-in)</td><td>Similar-image links from a public HTTPS image URL; account key needed</td><td>touches target</td><td class="needs"><code>--allow-active</code></td></tr>
+<tr><td><a href="#scan_host_ports"><code>scan_host_ports</code></a></td><td>Nmap (active, opt-in)</td><td>Authorized TCP service check on five common ports only</td><td>touches target</td><td class="needs"><code>nmap</code> on PATH; <code>--allow-active</code></td></tr>
 <tr><td><a href="#search_email"><code>search_email</code></a></td><td>holehe</td><td>Accounts linked to an email (noisy, off by default)</td><td>noisy</td><td class="needs"><code>holehe</code> on PATH; <code>--allow-active</code></td></tr>
 <tr><td><a href="#search_username"><code>search_username</code></a></td><td>sherlock</td><td>Accounts across 300+ platforms (noisy, off by default)</td><td>noisy</td><td class="needs"><code>sherlock</code> on PATH; <code>--allow-active</code></td></tr>
 <tr><td><a href="#search_breach"><code>search_breach</code></a></td><td>HaveIBeenPwned API</td><td>Data breach exposure</td><td>passive</td><td class="needs"><code>HIBP_API_KEY</code></td></tr>
@@ -403,6 +409,13 @@ This domain is for use in illustrative examples in documents.</pre>
 <p><b>MCP parameter:</b> <code>target</code> (string) &nbsp;|&nbsp; <b>Requires:</b> <code>BRIGHTDATA_API_KEY</code> + <code>BRIGHTDATA_SERP_ZONE</code></p>
 <pre>$ openosint footprint johndoe99</pre>
 </div>
+
+<section id="search_certificates"><h2>search_certificates</h2><p>Queries public certificate transparency records through SSLMate Cert Spotter, with crt.sh as a fallback. No key for limited public use. Historical evidence is not proof a subdomain is currently online.</p></section>
+<section id="search_archive"><h2>search_archive</h2><p>Queries the Internet Archive CDX index; when that is not reachable, returns only the nearest available Wayback snapshot and states this explicitly. Does not scrape the current target.</p></section>
+<section id="search_greynoise"><h2>search_greynoise</h2><p>Uses the GreyNoise Community API for a public IP. Unauthenticated free access may be limited or return no record. An optional GREYNOISE_API_KEY enables account-based requests.</p></section>
+<section id="file_metadata"><h2>file_metadata</h2><p>Reads a local image, video, or PDF with ExifTool. Does not modify or upload the file. GPS coordinates may be sensitive, so review the output before sharing it.</p></section>
+<section id="search_lens"><h2>search_lens</h2><p>Optional reverse-image search for a publicly hosted HTTPS image through SerpApi Google Lens. Active mode and a SerpApi key are needed. No local image is uploaded. Similar images do not prove a person's identity.</p></section>
+<section id="scan_host_ports"><h2>scan_host_ports</h2><p>Runs a bounded, five-port Nmap TCP connectivity check against a specifically authorized host only when active mode is enabled. This directly probes a network target.</p></section>
 
       <p class="edit"><a href="https://github.com/OpenOSINT/OpenOSINT/edit/main/site/content/tools.html" rel="noopener">Edit this page on GitHub</a></p>
     </article>

@@ -229,3 +229,10 @@ This domain is for use in illustrative examples in documents.</pre>
 <p><b>MCP parameter:</b> <code>target</code> (string) &nbsp;|&nbsp; <b>Requires:</b> <code>BRIGHTDATA_API_KEY</code> + <code>BRIGHTDATA_SERP_ZONE</code></p>
 <pre>$ openosint footprint johndoe99</pre>
 </div>
+
+<section id="search_certificates"><h2>search_certificates</h2><p>Queries public certificate transparency records through SSLMate Cert Spotter, with crt.sh as a fallback. No key for limited public use. Historical evidence is not proof a subdomain is currently online.</p></section>
+<section id="search_archive"><h2>search_archive</h2><p>Queries the Internet Archive CDX index; when that is not reachable, returns only the nearest available Wayback snapshot and states this explicitly. Does not scrape the current target.</p></section>
+<section id="search_greynoise"><h2>search_greynoise</h2><p>Uses the GreyNoise Community API for a public IP. Unauthenticated free access may be limited or return no record. An optional GREYNOISE_API_KEY enables account-based requests.</p></section>
+<section id="file_metadata"><h2>file_metadata</h2><p>Reads a local image, video, or PDF with ExifTool. Does not modify or upload the file. GPS coordinates may be sensitive, so review the output before sharing it.</p></section>
+<section id="search_lens"><h2>search_lens</h2><p>Optional reverse-image search for a publicly hosted HTTPS image through SerpApi Google Lens. Active mode and a SerpApi key are needed. No local image is uploaded. Similar images do not prove a person's identity.</p></section>
+<section id="scan_host_ports"><h2>scan_host_ports</h2><p>Runs a bounded, five-port Nmap TCP connectivity check against a specifically authorized host only when active mode is enabled. This directly probes a network target.</p></section>

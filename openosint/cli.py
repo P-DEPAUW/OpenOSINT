@@ -45,6 +45,14 @@ from openosint.tool_policy import (  # noqa: E402
     humanize,
     is_tool_enabled,
 )
+from openosint.tools.extra_sources import (  # noqa: E402
+    run_archive_osint,
+    run_certificates_osint,
+    run_greynoise_osint,
+    run_lens_osint,
+    run_metadata_osint,
+    run_nmap_osint,
+)
 from openosint.tools.scrape_url import run_scrape_url_osint  # noqa: E402
 from openosint.tools.search_abuseipdb import run_abuseipdb_osint  # noqa: E402
 from openosint.tools.search_breach import run_breach_osint  # noqa: E402
@@ -267,6 +275,18 @@ def _build_parser() -> argparse.ArgumentParser:
         "image", help="Prepare reverse-image searches (never uploads automatically)."
     )
     image_cmd.add_argument("source", nargs="?", metavar="PHOTO_PATH_OR_HTTPS_URL")
+
+    # Free passive sources and optional active tools; no AI or extra environment needed.
+    for name, help_text, arg_name in (
+        ("greynoise", "GreyNoise public IP reputation (limited free API).", "PUBLIC_IP"),
+        ("metadata", "Read local image/video/PDF metadata via ExifTool (no upload).", "FILE_PATH"),
+        ("certs", "Certificate Transparency search (Cert Spotter/crt.sh).", "DOMAIN"),
+        ("archive", "Historical URLs (Internet Archive CDX, no key).", "DOMAIN"),
+        ("lens", "Real Google Lens reverse-image results (SerpApi key + --allow-active).", "HTTPS_IMAGE_URL"),
+        ("ports", "Authorized 5-port Nmap scan (requires --allow-active).", "TARGET"),
+    ):
+        cmd = subparsers.add_parser(name, help=help_text)
+        cmd.add_argument("target", metavar=arg_name)
 
     # username
     username_cmd = subparsers.add_parser(
@@ -669,7 +689,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 # Direct subcommands that run one non-passive tool; refused up front in passive mode.
-_COMMAND_TOOLS = {"email": "search_email", "username": "search_username", "scrape": "scrape_url"}
+_COMMAND_TOOLS = {"email": "search_email", "username": "search_username", "scrape": "scrape_url", "lens": "search_lens", "ports": "scan_host_ports"}
 
 
 def _print_result(result: str) -> None:
@@ -1240,6 +1260,20 @@ async def _async_main() -> None:
                 print(f"  {provider['name']}: {provider['url']}")
                 print(f"    {provider['how']}")
             print(result["note"])
+    elif args.command in ("certs", "archive", "lens", "ports", "greynoise", "metadata"):
+        fns = {"greynoise": run_greynoise_osint, "metadata": run_metadata_osint, "certs": run_certificates_osint, "archive": run_archive_osint,
+               "lens": run_lens_osint, "ports": run_nmap_osint}
+        names = {"greynoise": "search_greynoise", "metadata": "file_metadata", "certs": "search_certificates", "archive": "search_archive",
+                 "lens": "search_lens", "ports": "scan_host_ports"}
+        try:
+            result = await fns[args.command](args.target)
+        except ValueError as exc:
+            print(f"[!] Invalid input: {exc}", file=sys.stderr)
+            sys.exit(2)
+        if json_output:
+            _emit_json(format_tool_result(names[args.command], args.target, result))
+        else:
+            print(result)
     elif args.command == "username":
         await _handle_username(
             args.target, args.timeout, is_parallel=is_parallel, json_output=json_output

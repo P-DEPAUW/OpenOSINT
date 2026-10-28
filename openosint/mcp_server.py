@@ -42,28 +42,42 @@ from mcp.server.stdio import stdio_server  # noqa: E402
 from mcp.types import CallToolResult, TextContent, Tool  # noqa: E402
 
 from openosint.json_output import to_json  # noqa: E402
-from openosint.tool_policy import ENV_ALLOW_ACTIVE, TOOL_POLICY, describe, disabled_result, is_tool_enabled  # noqa: E402
+from openosint.tool_policy import (  # noqa: E402
+    ENV_ALLOW_ACTIVE,
+    TOOL_POLICY,
+    describe,
+    disabled_result,
+    is_tool_enabled,
+)
+from openosint.tools.extra_sources import (  # noqa: E402
+    run_archive_osint,
+    run_certificates_osint,
+    run_greynoise_osint,
+    run_lens_osint,
+    run_metadata_osint,
+    run_nmap_osint,
+)
 from openosint.tools.generate_dorks import run_dork_osint  # noqa: E402
 from openosint.tools.scrape_url import run_scrape_url_osint  # noqa: E402
 from openosint.tools.search_abuseipdb import run_abuseipdb_osint  # noqa: E402
 from openosint.tools.search_breach import run_breach_osint  # noqa: E402
 from openosint.tools.search_censys import run_censys_osint  # noqa: E402
 from openosint.tools.search_dns import run_dns_osint  # noqa: E402
-from openosint.tools.search_rdap import run_rdap_osint  # noqa: E402
 from openosint.tools.search_domain import run_domain_osint  # noqa: E402
 from openosint.tools.search_dorks_live import run_dorks_live_osint  # noqa: E402
 from openosint.tools.search_email import run_email_osint  # noqa: E402
+from openosint.tools.search_footprint import run_footprint_osint  # noqa: E402
 from openosint.tools.search_gdelt_geo import run_gdelt_geo_osint, split_geojson_fence  # noqa: E402
 from openosint.tools.search_github import run_github_osint  # noqa: E402
 from openosint.tools.search_ip import run_ip_osint  # noqa: E402
 from openosint.tools.search_ip2location import run_ip2location_osint  # noqa: E402
 from openosint.tools.search_paste import run_paste_osint  # noqa: E402
 from openosint.tools.search_phone import run_phone_osint  # noqa: E402
+from openosint.tools.search_rdap import run_rdap_osint  # noqa: E402
 from openosint.tools.search_shodan import run_shodan_osint  # noqa: E402
 from openosint.tools.search_username import run_username_osint  # noqa: E402
 from openosint.tools.search_virustotal import run_virustotal_osint  # noqa: E402
 from openosint.tools.search_whois import run_whois_osint  # noqa: E402
-from openosint.tools.search_footprint import run_footprint_osint  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="[MCP] %(levelname)s: %(message)s")
 app = Server("openosint")
@@ -93,6 +107,12 @@ async def list_tools() -> list[Tool]:
 
 def _all_tools() -> list[Tool]:
     return [
+        Tool(name="search_greynoise", description="GreyNoise Community IP reputation lookup, limited free unauthenticated requests, optional GREYNOISE_API_KEY.", inputSchema=_with_json({"type":"object","properties":{"ip":{"type":"string"}},"required":["ip"]})),
+        Tool(name="file_metadata", description="Local read-only EXIF/metadata extraction via ExifTool for image, video or PDF. Can include GPS tags. No upload.", inputSchema=_with_json({"type":"object","properties":{"path":{"type":"string"}},"required":["path"]})),
+        Tool(name="search_certificates", description="Read public certificate transparency records for a domain via crt.sh (free, no key). Historical leads, not current DNS.", inputSchema=_with_json({"type":"object","properties":{"domain":{"type":"string"}},"required":["domain"]})),
+        Tool(name="search_archive", description="Read public historical URL captures through the Internet Archive Wayback CDX API (free, no key).", inputSchema=_with_json({"type":"object","properties":{"domain":{"type":"string"}},"required":["domain"]})),
+        Tool(name="search_lens", description="Opt-in live Google Lens reverse-image lookup via SerpApi. Sends a PUBLIC HTTPS image URL to SerpApi; needs a SerpApi account and active mode. Never uploads local files.", inputSchema=_with_json({"type":"object","properties":{"image_url":{"type":"string"}},"required":["image_url"]})),
+        Tool(name="scan_host_ports", description="ACTIVE: limited 5-port Nmap TCP check on a host you own/are authorized to scan. Requires installed nmap and --allow-active; does not run in passive mode.", inputSchema=_with_json({"type":"object","properties":{"target":{"type":"string"}},"required":["target"]})),
         Tool(
             name="search_email",
             description="Enumerate accounts linked to an email using holehe.",
@@ -523,6 +543,12 @@ def _all_tools() -> list[Tool]:
 
 # Map tool name → (coroutine factory, target key for JSON export)
 _HANDLERS: dict[str, tuple] = {
+    "search_greynoise": (lambda a: run_greynoise_osint(a["ip"]), lambda a: a["ip"]),
+    "file_metadata": (lambda a: run_metadata_osint(a["path"]), lambda a: a["path"]),
+    "search_certificates": (lambda a: run_certificates_osint(a["domain"]), lambda a: a["domain"]),
+    "search_archive": (lambda a: run_archive_osint(a["domain"]), lambda a: a["domain"]),
+    "search_lens": (lambda a: run_lens_osint(a["image_url"]), lambda a: a["image_url"]),
+    "scan_host_ports": (lambda a: run_nmap_osint(a["target"]), lambda a: a["target"]),
     "search_email": (
         lambda a: run_email_osint(a["email"], timeout_seconds=120),
         lambda a: a["email"],

@@ -53,6 +53,12 @@ class ToolPolicy:
 
 
 TOOL_POLICY: dict[str, ToolPolicy] = {
+    "search_greynoise": ToolPolicy(Noise.PASSIVE, "Free community reputation lookup via GreyNoise for public IPs; quota varies."),
+    "file_metadata": ToolPolicy(Noise.PASSIVE, "Reads metadata from a local image/video/PDF with ExifTool; no upload or changes."),
+    "search_certificates": ToolPolicy(Noise.PASSIVE, "Certificate Transparency index query to crt.sh; no target contact."),
+    "search_archive": ToolPolicy(Noise.PASSIVE, "Wayback index search; no target contact; results may be outdated."),
+    "search_lens": ToolPolicy(Noise.TOUCHES_TARGET, "Opt-in SerpApi Google Lens lookup; sends public image URL to a third party and may cause it to fetch that image. Uses an optional SerpApi account key for live matches."),
+    "scan_host_ports": ToolPolicy(Noise.TOUCHES_TARGET, "Opt-in Nmap TCP probes of exactly five ports on an authorized host; disabled by default."),
     "generate_dorks": ToolPolicy(Noise.PASSIVE, "Builds Google search URLs locally; sends nothing."),
     "search_breach": ToolPolicy(Noise.PASSIVE, "One request to haveibeenpwned.com."),
     "search_whois": ToolPolicy(Noise.PASSIVE, "Queries the registry/registrar WHOIS server, not the target."),
