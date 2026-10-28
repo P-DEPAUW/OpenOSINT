@@ -71,6 +71,25 @@ openosint > investigate example.com
   Report saved -> reports/2026-05-11_14-32-11_report.md
 ```
 
+## Reverse-image search (manual and private by default)
+
+The optional `image` CLI command provides a safe starting point for tracing where a
+photo appears online. It does **not** upload the photo, perform a search itself,
+identify a person, or claim to find a username. You decide whether to submit
+the image to Google Lens, TinEye or Yandex Images. Check any public profiles
+found independently; matching images alone cannot verify someone's identity.
+
+```bash
+openosint image ~/Pictures/photo.jpg
+openosint image 'https://example.org/photo.jpg'
+openosint --json image
+```
+
+Local JPG, PNG, GIF, TIFF, BMP, WebP, HEIC and AVIF files are checked by
+file signature. The command never opens a browser or contacts a search provider.
+For online images, the Yandex link can pre-fill the source URL when supported;
+Google Lens and TinEye provide their official upload/search pages.
+
 ## Features
 
 | Capability | Details |

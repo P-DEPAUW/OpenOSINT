@@ -31,6 +31,7 @@ import logging  # noqa: E402
 import os  # noqa: E402
 import sys  # noqa: E402
 
+from openosint.image_search import prepare_image_search  # noqa: E402
 from openosint.json_output import format_tool_result  # noqa: E402
 from openosint.proxy import (  # noqa: E402
     ProxyConfigError,
@@ -260,6 +261,12 @@ def _build_parser() -> argparse.ArgumentParser:
         metavar="SECONDS",
         help="Maximum execution time (default: 120).",
     )
+
+    # image -- passive, no upload, no browser side-effects
+    image_cmd = subparsers.add_parser(
+        "image", help="Prepare reverse-image searches (never uploads automatically)."
+    )
+    image_cmd.add_argument("source", nargs="?", metavar="PHOTO_PATH_OR_HTTPS_URL")
 
     # username
     username_cmd = subparsers.add_parser(
@@ -1219,6 +1226,20 @@ async def _async_main() -> None:
         await _handle_email(
             args.target, args.timeout, is_parallel=is_parallel, json_output=json_output
         )
+    elif args.command == "image":
+        try:
+            result = prepare_image_search(args.source)
+        except (ValueError, OSError) as exc:
+            print(f"[!] Image search input error: {exc}", file=sys.stderr)
+            sys.exit(2)
+        if json_output:
+            _emit_json(result)
+        else:
+            print("Image search options (no photo uploaded):")
+            for provider in result["providers"]:
+                print(f"  {provider['name']}: {provider['url']}")
+                print(f"    {provider['how']}")
+            print(result["note"])
     elif args.command == "username":
         await _handle_username(
             args.target, args.timeout, is_parallel=is_parallel, json_output=json_output
