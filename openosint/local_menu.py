@@ -45,6 +45,10 @@ TOOL_ITEMS = (
     ("search_certificates", "Certificaten / subdomeinen"),
     ("search_archive", "Webarchief"),
     ("search_github", "GitHub-profiel"),
+    ("search_username", "Sherlock: gebruikersnamen (Mac/Debian)"),
+    ("search_email", "Holehe: e-mailaccounts (Debian)"),
+    ("search_phone", "PhoneInfoga: telefoonnummers (Mac/Debian)"),
+    ("search_domain", "Sublist3r: domeinen (Debian)"),
     ("search_dns", "DNS"), ("search_rdap", "RDAP"),
     ("search_ip", "IP-informatie"), ("search_greynoise", "GreyNoise IP"),
     ("file_metadata", "Metadata uit lokale foto"),
@@ -57,7 +61,12 @@ INPUT_KEYS = {
     "search_ip": "ip", "search_greynoise": "ip", "file_metadata": "path",
     "generate_dorks": "target",
     "search_lens": "image_url",
+    "search_username": "username", "search_email": "email",
+    "search_phone": "phone", "search_domain": "domain",
 }
+ACTIVE_MENU_TOOLS = frozenset({
+    "search_lens", "search_username", "search_email", "search_phone", "search_domain"
+})
 
 
 def _preferences() -> dict[str, Any]:
@@ -170,9 +179,9 @@ async def _run_tool(name: str, value: str) -> tuple[str, bool]:
         return ("Foto gecontroleerd. Zoekpagina's beschikbaar (nog geen reverse-imagezoekopdracht uitgevoerd):\n" + providers), False
     if name not in INPUT_KEYS:
         return "Onbekende tool; niets uitgevoerd.", True
-    if name == "search_lens":
-        # This is reached only after the user explicitly confirms sending the
-        # public image URL. Turn on active policy for this ONE tool invocation.
+    if name in ACTIVE_MENU_TOOLS:
+        # Explicitly chosen and confirmed from the local menu. Allow only
+        # this invocation to use active/noisy tools, then restore policy.
         old_value = os.environ.get(ENV_ALLOW_ACTIVE)
         os.environ[ENV_ALLOW_ACTIVE] = "1"
         try:
@@ -264,15 +273,34 @@ async def run_local_menu() -> None:
                 continue
             name = chosen
         elif action == "domain":
-            chosen = await _choose((("search_certificates", "Certificaten"), ("search_archive", "Webarchief"), ("search_dns", "DNS"), ("search_rdap", "RDAP"), ("back", "Terug")), prefs)
+            chosen = await _choose((("search_certificates", "Certificaten"), ("search_archive", "Webarchief"), ("search_dns", "DNS"), ("search_rdap", "RDAP"), ("search_domain", "Sublist3r (Debian)"), ("back", "Terug")), prefs)
             if chosen in (None, "back"):
                 continue
             name = chosen
         elif action == "username":
-            name = "search_github"
-        elif action in ("email", "phone", "naam"):
+            chosen = await _choose((("search_github", "GitHub (passief)"),
+                                    ("search_username", "Sherlock (actief; Mac/Debian)"),
+                                    ("back", "Terug")), prefs)
+            if chosen in (None, "back"):
+                continue
+            name = chosen
+        elif action == "email":
+            chosen = await _choose((("generate_dorks", "Zoeklinks (passief)"),
+                                    ("search_email", "Holehe (actief; Debian)"),
+                                    ("back", "Terug")), prefs)
+            if chosen in (None, "back"):
+                continue
+            name = chosen
+        elif action == "phone":
+            chosen = await _choose((("generate_dorks", "Zoeklinks (passief)"),
+                                    ("search_phone", "PhoneInfoga (actief; Mac/Debian)"),
+                                    ("back", "Terug")), prefs)
+            if chosen in (None, "back"):
+                continue
+            name = chosen
+        elif action == "naam":
             name = "generate_dorks"
-            console.print("[#C2A674]Deze route bereidt alleen zoeklinks voor; geen accounts of personen zijn geverifieerd.[/]")
+            console.print("[#C2A674]Deze route bereidt alleen zoeklinks voor; geen identiteit geverifieerd.[/]")
         else:
             continue
         label = ("Publieke HTTPS-foto-URL" if name == "search_lens" else
@@ -281,10 +309,15 @@ async def run_local_menu() -> None:
         value = await _prompt_value(prompt, label)
         if value is None:
             continue
-        if name == "search_lens":
-            console.print("[#C2A674]SerpApi ontvangt deze OPENBARE foto-URL. Lokale foto's worden niet geüpload.[/]")
-            agreed = await _choose((("go", "Verstuur URL en zoek met SerpApi"),
-                                     ("back", "Terug zonder zoeken")), prefs)
+        if name in ACTIVE_MENU_TOOLS:
+            if name == "search_lens":
+                warning = "SerpApi ontvangt deze OPENBARE foto-URL. Lokale foto's worden niet geüpload."
+                proceed = "Verstuur URL en zoek met SerpApi"
+            else:
+                warning = "Deze tool kan diensten of het doel benaderen en veel verzoeken sturen. Alleen bevoegd onderzoek."
+                proceed = "Voer deze zoekopdracht uit"
+            console.print(f"[#C2A674]{warning}[/]")
+            agreed = await _choose((("go", proceed), ("back", "Terug zonder zoeken")), prefs)
             if agreed != "go":
                 continue
         console.print("[#9A9FB4]Onderzoek gestart; status volgt uit de echte bron.[/]")

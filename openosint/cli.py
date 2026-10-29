@@ -255,6 +255,12 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Start the interactive REPL (default when no command given).",
     )
 
+    # ai — explicitly request the existing local Qwen-powered terminal agent.
+    # This is a mode switch, not a second installation or a separate agent.
+    subparsers.add_parser(
+        "ai", help="Start OpenOSINT AI with local Qwen 3.5 4B (Ollama)."
+    )
+
     # email
     email_cmd = subparsers.add_parser(
         "email",
@@ -1174,8 +1180,24 @@ def _handle_history(args: argparse.Namespace) -> None:
 
 
 async def _async_main() -> None:
+    # Existing Mac/T9 arrangement: local OSINT always works; optional Debian
+    # binaries are reached through the *existing* OSINT bridge when T9 is mounted.
+    # No VM is booted merely by opening OpenOSINT.
+    if sys.platform == "darwin" and os.path.ismount("/Volumes/T9"):
+        bridge = os.path.join(
+            os.path.expanduser("~"), ".config", "h0m3", "osint-debian-bin"
+        )
+        if os.path.isfile(os.path.join(bridge, "remote-tool")):
+            os.environ["PATH"] = bridge + os.pathsep + os.environ.get("PATH", "")
+
     parser = _build_parser()
     args = parser.parse_args()
+    if args.command == "ai":
+        args.command = None
+        args.provider = "ollama"
+        args.ollama_model = "qwen3.5:4b"
+        args.ollama_host = "http://127.0.0.1:11434"
+        args.allow_active = True
     _configure_logging(args.verbose)
     if args.allow_active:
         os.environ[ENV_ALLOW_ACTIVE] = "1"

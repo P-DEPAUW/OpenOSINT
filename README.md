@@ -151,6 +151,18 @@ Google Lens and TinEye provide their official upload/search pages.
 | `search_lens` | SerpApi Google Lens | Opt-in visual matching of a public image URL; account key needed |
 | `scan_host_ports` | Nmap on Mac | Opt-in authorized 5-port TCP scan (active) |
 
+### Mac Air: two OSINT modes, one existing installation
+
+Use the same V2 code and existing Mac installation for both modes:
+
+- `osint` (or `openosint`): **tools-only** dark keyboard menu; usable without T9 or Debian.
+- `osint ai` (or `openosint ai`): **AI agent**, Qwen 3.5 4B via local Ollama. In the chat, enter a name, username, email or IP directly, or type `searchlist` for the English category guide. The agent chooses among the currently enabled tools.
+- `osint debian`: optional legacy Debian terminal entry, only when T9 is mounted (requires the existing Parallels VM).
+
+**Optional Debian tools:** with T9 mounted, the existing Parallels Debian VM is used on demand via `prlctl exec`, not the stale Debian SSH IP. Sherlock, Holehe and Sublist3r are available in the guest; PhoneInfoga is provided by the existing Mac binary. The existing `~/.config/h0m3/osint-debian-bin` bridges these for direct tool/agent calls. If T9 or Debian is missing, the Mac menu and all Mac tools remain available, and guest-only tools report unavailable rather than fabricating results. The guest's internet/DNS must actually work for its network-based tools to return findings. Active/noisy searches in the tools menu require explicit confirmation; the AI launcher preserves its existing `--allow-active` behavior.
+
+Original V1 is untouched. The V2 Mac repository remains the single source for both launchers (`scripts/osint_launcher.sh` and `scripts/debian_tool_bridge.py`). The live launchers are symlinks, not copies or additional OSINT installations.
+
 ### Mac Air: direct commands and MCP
 
 Run `openosint` on Mac Air to open the dark keyboard menu even when no AI API key is configured. Use Up/Down and Enter, Escape to return. Choose Tools > Photo for image search links; the image is not uploaded. Results are short by default, and Full / Save preserves all source text. An explicitly configured AI provider still opens the original interactive AI shell. Inside the existing AI terminal chat (including local Owen/Ollama), type `searchlist` to show 11 English investigation categories (name, username, email, phone, IP, domain, website, photo, company, location, file/hash). This is a local help list, not another OSINT tool, an AI request, or a scan. Type `tools` for the separate technical tool catalog.

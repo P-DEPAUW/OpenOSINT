@@ -33,3 +33,27 @@ def test_searchlist_dispatch_is_before_any_ai_investigation():
     src = inspect.getsource(repl.OpenOSINTRepl.run)
     assert '"searchlist"' in src
     assert src.index('if user_input.lower() in ("searchlist"') < src.index("await self._run_investigation(user_input)")
+
+
+def test_ai_alias_uses_existing_qwen_provider(monkeypatch):
+    import sys
+
+    from openosint import cli
+
+    observed = {}
+
+    class FakeOllamaRepl:
+        def __init__(self, **kwargs):
+            observed.update(kwargs)
+
+        async def run(self):
+            observed["started"] = True
+
+    monkeypatch.setattr(sys, "argv", ["openosint", "ai"])
+    monkeypatch.setattr(cli, "_check_ollama_server", lambda host: True)
+    monkeypatch.setattr(repl, "OpenOSINTRepl", FakeOllamaRepl)
+    import asyncio
+    asyncio.run(cli._async_main())
+    assert observed["provider"] == "ollama"
+    assert observed["ollama_model"] == "qwen3.5:4b"
+    assert observed["started"] is True
