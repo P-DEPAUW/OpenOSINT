@@ -62,6 +62,40 @@ _TOOL_INFO_ROWS = [
     ("search_rdap", "RDAP (IANA bootstrap)", "Registrar, dates, name servers (keyless)"),
 ]
 
+# Navigation only: these are target types, not tool registrations or searches.
+# Some types need an AI-guided public-source search; they do not imply a
+# dedicated working tool or an independently verified identity.
+_SEARCH_CATEGORIES = (
+    ("Name", "public mentions and profiles"),
+    ("Username", "accounts and public profiles"),
+    ("Email address", "public accounts and data breaches"),
+    ("Phone number", "country, carrier and public mentions"),
+    ("IP address", "provider, ASN and reputation"),
+    ("Domain", "DNS, WHOIS, certificates and archives"),
+    ("Website / URL", "public website information and history"),
+    ("Photo / image", "metadata and reverse-image search"),
+    ("Company", "public company records and mentions"),
+    ("Location", "public place and address information"),
+    ("File / hash", "metadata and known hash references"),
+)
+
+
+def _print_search_list() -> None:
+    """Show the search categories locally without contacting Owen or any tool."""
+    from rich.text import Text
+
+    lines = Text()
+    for number, (category, detail) in enumerate(_SEARCH_CATEGORIES, 1):
+        lines.append(f"{number:>2}. {category:<18}", style="#79BAC8")
+        lines.append(detail + "\n", style="#B6A7C8")
+    lines.append("\nExample: investigate username exampleuser", style="#A78BFA")
+    lines.append(
+        "\nNo search started. Supported tools depend on the category and configuration.",
+        style="#9A9FB4",
+    )
+    console.print(Panel(lines, title="SEARCH LIST · WHAT DO YOU WANT TO INVESTIGATE?", border_style="#79658E", padding=(0, 1)))
+
+
 # ---------------------------------------------------------------------------
 # Rich console
 # ---------------------------------------------------------------------------
@@ -130,7 +164,7 @@ def _print_banner(provider: str, model: str) -> None:
             f"Max {max_tool_calls()} tool calls per request. Restart with --allow-active for noisy tools.[/]"
         )
     console.print(
-        "  Type a target or question. [dim]'help'[/] for commands. [dim]'exit'[/] to quit.\n"
+        "  Type [#79BAC8]searchlist[/] for search categories. [dim]'help'[/] for commands. [dim]'exit'[/] to quit.\n"
     )
     Console(stderr=True).print(
         "[#A78BFA]⭐[/] [dim]If OpenOSINT is useful, star it → https://github.com/OpenOSINT/OpenOSINT[/]"
@@ -149,6 +183,7 @@ def _print_help() -> None:
                     "  [#79BAC8]clear[/]             Clear conversation memory",
                     "  [#79BAC8]save[/]              Save complete result to reports/",
                     "  [#79BAC8]full[/]              Show complete result",
+                    "  [#79BAC8]searchlist[/]        Search categories (no tool execution)",
                     "  [#79BAC8]tools[/]             List available OSINT tools",
                     "  [#79BAC8]config[/]            Show current configuration",
                     "  [#79BAC8]history[/]           Browse saved session history",
@@ -447,6 +482,10 @@ class OpenOSINTRepl:
 
                 if user_input.lower() == "help":
                     _print_help()
+                    continue
+
+                if user_input.lower() in ("searchlist", "/searchlist", "categories", "zoeklijst", "/zoeklijst"):
+                    _print_search_list()
                     continue
 
                 if user_input.lower() == "tools":

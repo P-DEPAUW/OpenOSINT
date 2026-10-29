@@ -153,7 +153,7 @@ Google Lens and TinEye provide their official upload/search pages.
 
 ### Mac Air: direct commands and MCP
 
-Run `openosint` on Mac Air to open the dark keyboard menu even when no AI API key is configured. Use Up/Down and Enter, Escape to return. Choose Tools > Photo for image search links; the image is not uploaded. Results are short by default, and Full / Save preserves all source text. An explicitly configured AI provider still opens the original interactive AI shell.
+Run `openosint` on Mac Air to open the dark keyboard menu even when no AI API key is configured. Use Up/Down and Enter, Escape to return. Choose Tools > Photo for image search links; the image is not uploaded. Results are short by default, and Full / Save preserves all source text. An explicitly configured AI provider still opens the original interactive AI shell. Inside the existing AI terminal chat (including local Owen/Ollama), type `searchlist` to show 11 English investigation categories (name, username, email, phone, IP, domain, website, photo, company, location, file/hash). This is a local help list, not another OSINT tool, an AI request, or a scan. Type `tools` for the separate technical tool catalog.
 
 Run the checked-out version with `openosint` from Terminal (the separate Python environment is on Mac Air; no T9, NAS, Debian VM or server is needed for the new functions):
 
