@@ -48,10 +48,15 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
 
+from openosint import __version__ as _VERSION
 from openosint.agent import default_anthropic_model
 from openosint.brightdata import BRIGHTDATA_LINK_WEB
-from openosint.env import load_env_or_exit
-from openosint.tools.generate_dorks import run_dork_osint
+from openosint.config_store import config_path, read_config, validate_pair, write_config
+from openosint.env import load_env_or_exit, mark_saved, value_source
+from openosint.paths import home_dir
+from openosint.regexes import EMAIL_FIND_RE
+from openosint.request_guard import RequestGuardMiddleware
+from openosint.settings_catalog import SAVEABLE_NAMES, SETTING_NAMES, public_catalog
 from openosint.tool_policy import (
     ENV_ALLOW_ACTIVE,
     TOOL_POLICY,
@@ -60,12 +65,13 @@ from openosint.tool_policy import (
     disabled_result,
     env_allows_active,
     filter_definitions,
+    forced_passive,
+    is_forced_passive,
     is_tool_enabled,
     label,
     max_tool_calls,
-    forced_passive,
-    is_forced_passive,
 )
+from openosint.tools.generate_dorks import run_dork_osint
 from openosint.tools.scrape_url import run_scrape_url_osint
 from openosint.tools.search_abuseipdb import run_abuseipdb_osint
 from openosint.tools.search_breach import run_breach_osint
@@ -86,14 +92,8 @@ from openosint.tools.search_shodan import run_shodan_osint
 from openosint.tools.search_username import run_username_osint
 from openosint.tools.search_virustotal import run_virustotal_osint
 from openosint.tools.search_whois import run_whois_osint
-from openosint import __version__ as _VERSION
-from openosint.config_store import config_path, read_config, validate_pair, write_config
-from openosint.env import mark_saved, value_source
-from openosint.paths import home_dir
-from openosint.regexes import EMAIL_FIND_RE
-from openosint.request_guard import RequestGuardMiddleware
-from openosint.settings_catalog import SAVEABLE_NAMES, SETTING_NAMES, public_catalog
 from openosint.utils import find_binary
+
 _ROOT = Path(__file__).parent.parent
 
 # Web assets: prefer the package-relative path (pip install) with project-root fallback (dev/editable)
@@ -760,7 +760,7 @@ _TOOL_CATALOG: list[dict] = [
     {
         "name": "search_footprint",
         "description": (
-            "Collect a target's public search-engine footprint via Bright Data SERP API. "
+            "Collect public search-engine results using Bright Data or existing free SerpApi credits. "
             "Detects entity type (email, username, domain, phone, or full name) and runs "
             "entity-type-aware Google queries, returning ECG nodes/edges for discovered profiles."
         ),
@@ -770,11 +770,8 @@ _TOOL_CATALOG: list[dict] = [
         "icon": "👣",
         "tool_type": "A",
         "requires_binary": [],
-        "requires_env": ["BRIGHTDATA_API_KEY", "BRIGHTDATA_SERP_ZONE"],
-        "env_hints": {
-            "BRIGHTDATA_API_KEY": BRIGHTDATA_LINK_WEB,
-            "BRIGHTDATA_SERP_ZONE": "Your Bright Data SERP zone name",
-        },
+        "requires_env": [],
+        "env_hints": {},
     },
 ]
 

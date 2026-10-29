@@ -490,7 +490,7 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "returning live structured results (title, URL, snippet). "
             "Use after generate_dorks when you need actual search results, not just URLs. "
             "Runs up to 5 dorks by default — each is a billable API call. "
-            "Uses BRIGHTDATA_API_KEY and BRIGHTDATA_SERP_ZONE."
+            "Uses Bright Data when configured; otherwise existing free SerpApi quota or public search."
         ),
         "input_schema": {
             "type": "object",
@@ -531,7 +531,7 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "entity-type-aware Google queries, returning structured results (title, URL, snippet) "
             "and Entity Correlation Graph nodes/edges for discovered domains and profiles. "
             "Use when you need a targeted, type-aware SERP sweep rather than generic dork URLs. "
-            "Uses BRIGHTDATA_API_KEY and BRIGHTDATA_SERP_ZONE."
+            "Uses Bright Data when configured; otherwise existing free SerpApi quota or public search."
         ),
         "input_schema": {
             "type": "object",

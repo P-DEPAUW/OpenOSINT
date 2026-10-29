@@ -386,7 +386,7 @@ def _all_tools() -> list[Tool]:
                 "Execute Google dork queries for a target via the Bright Data SERP API, "
                 "returning live structured results (title, URL, snippet). "
                 "Runs up to 5 dorks by default — each is a billable API call. "
-                "Uses BRIGHTDATA_API_KEY and BRIGHTDATA_SERP_ZONE env vars."
+                "Uses Bright Data when configured; otherwise existing free SerpApi quota or public search."
             ),
             inputSchema=_with_json(
                 {
@@ -418,7 +418,7 @@ def _all_tools() -> list[Tool]:
                 "Detects entity type (email, username, domain, phone, or full name) and runs "
                 "entity-type-aware Google queries, returning structured results and Entity "
                 "Correlation Graph nodes/edges for discovered domains and profiles. "
-                "Uses BRIGHTDATA_API_KEY and BRIGHTDATA_SERP_ZONE env vars."
+                "Uses Bright Data when configured; otherwise existing free SerpApi quota or public search."
             ),
             inputSchema=_with_json(
                 {

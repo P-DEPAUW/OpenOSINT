@@ -12,7 +12,6 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -49,24 +48,34 @@ _ORGANIC_PAYLOAD = {
 
 
 class TestSearchFootprintConfig:
-    async def test_missing_api_key_returns_error(self, monkeypatch):
+    async def test_missing_api_key_uses_free_search(self, monkeypatch):
         monkeypatch.delenv("BRIGHTDATA_API_KEY", raising=False)
         monkeypatch.delenv("BRIGHTDATA_SERP_ZONE", raising=False)
+        monkeypatch.delenv("SERPAPI_API_KEY", raising=False)
         from openosint.tools.search_footprint import run_footprint_osint
 
-        result = await run_footprint_osint("john doe")
-        assert "BRIGHTDATA_API_KEY" in result
-        assert "5,000" in result
-        assert "get.brightdata.com" in result
+        mocked = MagicMock(status_code=200)
+        mocked.text = (
+            '<a class="result__a" href="//duckduckgo.com/l/'
+            '?uddg=https%3A%2F%2Ffacebook.com%2Fjohn.doe">'
+            'John Doe - Facebook</a>'
+        )
+        with patch("openosint.free_serp.requests.get", return_value=mocked):
+            result = await run_footprint_osint("john doe", max_queries=1)
+        assert "free public search" in result
+        assert "[Footprint] URL: https://facebook.com/john.doe" in result
 
-    async def test_missing_zone_returns_error(self, monkeypatch):
+    async def test_missing_zone_uses_free_search(self, monkeypatch):
         monkeypatch.setenv("BRIGHTDATA_API_KEY", "test-key")
         monkeypatch.delenv("BRIGHTDATA_SERP_ZONE", raising=False)
+        monkeypatch.delenv("SERPAPI_API_KEY", raising=False)
         from openosint.tools.search_footprint import run_footprint_osint
 
-        result = await run_footprint_osint("john doe")
-        assert "BRIGHTDATA_SERP_ZONE" in result
-        assert "get.brightdata.com" in result
+        mocked = MagicMock(status_code=200)
+        mocked.text = '<a class="result__a" href="https://example.com/john-doe">John Doe</a>'
+        with patch("openosint.free_serp.requests.get", return_value=mocked):
+            result = await run_footprint_osint("john doe", max_queries=1)
+        assert "https://example.com/john-doe" in result
 
     async def test_empty_target_returns_error(self, monkeypatch):
         monkeypatch.setenv("BRIGHTDATA_API_KEY", "test-key")

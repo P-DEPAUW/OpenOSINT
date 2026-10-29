@@ -521,6 +521,8 @@ This domain is for use in illustrative examples in documents.
 
 ### search_footprint
 
+**Search fallback:** if Bright Data keys are absent, the footprint command uses the existing SerpApi free-plan quota when available, with DuckDuckGo public HTML as fallback (no new paid API). Results are unverified leads and availability depends on DuckDuckGo. No automatic identity matching is claimed.
+
 Collects a target's public search-engine footprint via [Bright Data SERP API](https://get.brightdata.com/984ni58s2oad?utm_source=github&utm_medium=readme)¹. Detects entity type (email, username, domain, phone, or full name) and runs entity-type-aware Google queries, returning structured results plus Entity Correlation Graph nodes/edges for discovered domains and profiles. Requires `BRIGHTDATA_API_KEY` and `BRIGHTDATA_SERP_ZONE`.
 
 ```bash

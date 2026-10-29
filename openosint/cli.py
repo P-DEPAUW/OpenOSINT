@@ -556,8 +556,8 @@ def _build_parser() -> argparse.ArgumentParser:
     footprint_cmd = subparsers.add_parser(
         "footprint",
         help=(
-            "Entity-type-aware SERP footprint via Bright Data (no AI). "
-            "Requires BRIGHTDATA_API_KEY and BRIGHTDATA_SERP_ZONE."
+            "Entity-type-aware search (no AI). Uses Bright Data when configured "
+            "or free public search otherwise."
         ),
     )
     footprint_cmd.add_argument(

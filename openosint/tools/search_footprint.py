@@ -33,8 +33,8 @@ from urllib.parse import urlparse
 import requests
 
 from openosint.brightdata import BRIGHTDATA_LINK_CLI
-from openosint.settings_catalog import missing_from, missing_keys_message
 from openosint.regexes import detect_entity_kind
+from openosint.settings_catalog import missing_from
 from openosint.tools.exceptions import OSINTError, ToolExecutionError
 
 logger = logging.getLogger(__name__)
@@ -187,7 +187,19 @@ async def run_footprint_osint(
     _k = api_keys or {}
     missing = missing_from(["BRIGHTDATA_API_KEY", "BRIGHTDATA_SERP_ZONE"], _k, os.environ)
     if missing:
-        return missing_keys_message("search_footprint", missing)
+        # Keep person/name searches useful without forcing a paid API setup.
+        # Preserve the existing Bright Data path when both keys are present.
+        from openosint.free_serp import search_available_footprint
+
+        cleaned = target.strip()
+        if not cleaned:
+            return "Invalid input: target must not be empty."
+        kind = detect_entity_kind(cleaned)
+        if kind in _UNSUPPORTED_KINDS:
+            return f"Scan error: footprint search is not supported for entity type '{kind}'."
+        templates = _TEMPLATES.get(kind, _TEMPLATES["person"])
+        queries = [t.format(target=cleaned) for t in templates[:max(1, min(max_queries, 3))]]
+        return await asyncio.to_thread(search_available_footprint, cleaned, queries, timeout_seconds, _k.get("SERPAPI_API_KEY") or os.environ.get("SERPAPI_API_KEY", ""))
     api_key = _k.get("BRIGHTDATA_API_KEY") or os.environ["BRIGHTDATA_API_KEY"]
     zone = _k.get("BRIGHTDATA_SERP_ZONE") or os.environ["BRIGHTDATA_SERP_ZONE"]
 
