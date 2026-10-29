@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tools reference: 27 OSINT tools | OpenOSINT</title>
-<meta name="description" content="Reference for all 27 OpenOSINT tools: what each finds, its noise level, the API key or binary it needs, and example output.">
+<title>Tools reference: 29 OSINT tools | OpenOSINT</title>
+<meta name="description" content="Reference for all 29 OpenOSINT tools: what each finds, its noise level, the API key or binary it needs, and example output.">
 <link rel="canonical" href="https://openosint.tech/tools/">
 <meta name="theme-color" content="#16181b">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
@@ -15,16 +15,16 @@
 <link rel="stylesheet" href="/style.css">
 <meta property="og:site_name" content="OpenOSINT">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Tools reference: 27 OSINT tools | OpenOSINT">
-<meta property="og:description" content="Reference for all 27 OpenOSINT tools: what each finds, its noise level, the API key or binary it needs, and example output.">
+<meta property="og:title" content="Tools reference: 29 OSINT tools | OpenOSINT">
+<meta property="og:description" content="Reference for all 29 OpenOSINT tools: what each finds, its noise level, the API key or binary it needs, and example output.">
 <meta property="og:url" content="https://openosint.tech/tools/">
 <meta property="og:image" content="https://openosint.tech/assets/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="OpenOSINT: open-source engine for passive checks of public information">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Tools reference: 27 OSINT tools | OpenOSINT">
-<meta name="twitter:description" content="Reference for all 27 OpenOSINT tools: what each finds, its noise level, the API key or binary it needs, and example output.">
+<meta name="twitter:title" content="Tools reference: 29 OSINT tools | OpenOSINT">
+<meta name="twitter:description" content="Reference for all 29 OpenOSINT tools: what each finds, its noise level, the API key or binary it needs, and example output.">
 <meta name="twitter:image" content="https://openosint.tech/assets/og.png">
 <script type="application/ld+json">
 {
@@ -144,11 +144,13 @@
         </ol>
       </nav>
       <h1>Tools reference</h1>
-      <p class="lead">OpenOSINT ships 27 investigation tools. Each one wraps an external API, a binary or a local computation. They are available through the <a href="/docs/quickstart/">CLI and REPL</a>, the <a href="/docs/mcp/">MCP server</a> and the <a href="/docs/web-ui/">web UI</a>. The Source, Noise and Needs columns are generated from the code, so they match the version you install.</p>
+      <p class="lead">OpenOSINT ships 29 investigation tools. Each one wraps an external API, a binary or a local computation. They are available through the <a href="/docs/quickstart/">CLI and REPL</a>, the <a href="/docs/mcp/">MCP server</a> and the <a href="/docs/web-ui/">web UI</a>. The Source, Noise and Needs columns are generated from the code, so they match the version you install.</p>
 <p>Noise levels (<a href="/docs/safety/">what they mean</a>): passive tools are on by default; tools that touch the target or are noisy need <code>--allow-active</code>.</p>
 
 <div class="table-wrap" tabindex="0" role="region" aria-label="Table"><table>
 <tr><th>Tool</th><th>Source</th><th>What it finds</th><th>Noise</th><th>Needs</th></tr>
+<tr><td><a href="#list_debian_osint"><code>list_debian_osint</code></a></td><td>Existing Debian / Parallels inventory</td><td>Twelve installed OSINT tool names, input types, and VM availability</td><td>passive</td><td class="needs">&mdash;</td></tr>
+<tr><td><a href="#search_debian_osint"><code>search_debian_osint</code></a></td><td>Existing Debian / Parallels OSINT binaries</td><td>Opt-in public lookups using one selected tool from the twelve-tool collection</td><td>noisy</td><td class="needs"><code>--allow-active</code></td></tr>
 <tr><td><a href="#search_greynoise"><code>search_greynoise</code></a></td><td>GreyNoise Community API</td><td>IP internet noise and RIOT reputation (limited free tier)</td><td>passive</td><td class="needs">&mdash;</td></tr>
 <tr><td><a href="#file_metadata"><code>file_metadata</code></a></td><td>ExifTool (local, read-only)</td><td>Local media or PDF EXIF, camera, dates, GPS (sensitive)</td><td>passive</td><td class="needs"><code>exiftool</code> on PATH</td></tr>
 <tr><td><a href="#search_certificates"><code>search_certificates</code></a></td><td>SSLMate Cert Spotter / crt.sh</td><td>Historical certificate subdomains from public CT logs</td><td>passive</td><td class="needs">&mdash;</td></tr>
@@ -178,6 +180,21 @@
 <tr><td><a href="#search_footprint"><code>search_footprint</code></a></td><td><a href="https://get.brightdata.com/984ni58s2oad?utm_source=site&amp;utm_medium=tools" target="_blank" rel="noopener">Bright Data SERP API</a></td><td>Entity-type-aware SERP footprint + correlation graph</td><td>passive</td><td class="needs"><code>BRIGHTDATA_API_KEY</code>; <code>BRIGHTDATA_SERP_ZONE</code></td></tr>
 </table></div>
 <hr>
+<h2 id="list_debian_osint"><code>list_debian_osint</code></h2>
+<div class="indent">
+<p>Reports the names, search types and Parallels/T9 status of twelve OSINT tools already installed on the user's Debian VM. It performs no scan and needs no API key.</p>
+<p><b>MCP parameters:</b> none. The inventory reports availability, not successful target investigations.</p>
+</div>
+<hr>
+
+<h2 id="search_debian_osint"><code>search_debian_osint</code></h2>
+<div class="indent">
+<p>Runs exactly one selected pre-existing Debian OSINT binary on a validated username, email, E.164 phone number or domain. Uses the existing Parallels VM. Requires T9 and a functioning Debian guest network for internet lookups; no SSH-IP dependency or duplicate installation.</p>
+<p><b>MCP parameters:</b> <code>tool</code> (one of the twelve tool names), <code>target</code> (matching input type). <b>Active mode required:</b> this may contact third-party services and is off by default.</p>
+<p>Commands: <code>osint</code> &rarr; Tools kiezen &rarr; 12 bestaande Debian OSINT-tools, or <code>osint ai</code> for the local Qwen agent. A missing guest or DNS failure is reported as an error, not as zero findings.</p>
+</div>
+<hr>
+
 <h2 id="search_email"><code>search_email</code></h2>
 <div class="indent">
 <p>Enumerates online services linked to an email address using <a href="https://github.com/megadose/holehe" target="_blank" rel="noopener">holehe</a>. Works by sending password-reset probes &mdash; no login required on target services.</p>

@@ -262,6 +262,12 @@
 <td>Runs one agent per target under a shared tool-call cap; passive unless active is enabled.</td>
 </tr>
 <tr>
+<td><code>list_debian_osint</code></td>
+<td>passive</td>
+<td>on</td>
+<td>Read-only list of the twelve existing Debian binaries, no live target probes.</td>
+</tr>
+<tr>
 <td><code>scan_host_ports</code></td>
 <td>touches target</td>
 <td><strong>off</strong></td>
@@ -302,6 +308,12 @@
 <td>passive</td>
 <td>on</td>
 <td>Certificate Transparency index query to crt.sh; no target contact.</td>
+</tr>
+<tr>
+<td><code>search_debian_osint</code></td>
+<td>noisy</td>
+<td><strong>off</strong></td>
+<td>Opt-in lookup using an existing Debian OSINT binary. Can contact third-party sites, take up to 120 seconds, or fail if the guest network is unavailable.</td>
 </tr>
 <tr>
 <td><code>search_dns</code></td>

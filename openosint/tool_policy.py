@@ -53,6 +53,8 @@ class ToolPolicy:
 
 
 TOOL_POLICY: dict[str, ToolPolicy] = {
+    "list_debian_osint": ToolPolicy(Noise.PASSIVE, "Read-only list of the twelve existing Debian binaries, no live target probes."),
+    "search_debian_osint": ToolPolicy(Noise.NOISY, "Opt-in lookup using an existing Debian OSINT binary. Can contact third-party sites, take up to 120 seconds, or fail if the guest network is unavailable."),
     "search_greynoise": ToolPolicy(Noise.PASSIVE, "Free community reputation lookup via GreyNoise for public IPs; quota varies."),
     "file_metadata": ToolPolicy(Noise.PASSIVE, "Reads metadata from a local image/video/PDF with ExifTool; no upload or changes."),
     "search_certificates": ToolPolicy(Noise.PASSIVE, "Certificate Transparency index query to crt.sh; no target contact."),

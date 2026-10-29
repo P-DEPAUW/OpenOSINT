@@ -1,3 +1,18 @@
+<h2 id="list_debian_osint"><code>list_debian_osint</code></h2>
+<div class="indent">
+<p>Reports the names, search types and Parallels/T9 status of twelve OSINT tools already installed on the user's Debian VM. It performs no scan and needs no API key.</p>
+<p><b>MCP parameters:</b> none. The inventory reports availability, not successful target investigations.</p>
+</div>
+<hr>
+
+<h2 id="search_debian_osint"><code>search_debian_osint</code></h2>
+<div class="indent">
+<p>Runs exactly one selected pre-existing Debian OSINT binary on a validated username, email, E.164 phone number or domain. Uses the existing Parallels VM. Requires T9 and a functioning Debian guest network for internet lookups; no SSH-IP dependency or duplicate installation.</p>
+<p><b>MCP parameters:</b> <code>tool</code> (one of the twelve tool names), <code>target</code> (matching input type). <b>Active mode required:</b> this may contact third-party services and is off by default.</p>
+<p>Commands: <code>osint</code> &rarr; Tools kiezen &rarr; 12 bestaande Debian OSINT-tools, or <code>osint ai</code> for the local Qwen agent. A missing guest or DNS failure is reported as an error, not as zero findings.</p>
+</div>
+<hr>
+
 <h2 id="search_email"><code>search_email</code></h2>
 <div class="indent">
 <p>Enumerates online services linked to an email address using <a href="https://github.com/megadose/holehe" target="_blank" rel="noopener">holehe</a>. Works by sending password-reset probes &mdash; no login required on target services.</p>

@@ -3,7 +3,7 @@ mcp-name: io.github.OpenOSINT/openosint
 <div align="center">
   <img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/docs/logo.svg" alt="OpenOSINT" width="200" />
   <h1>OpenOSINT</h1>
-  <p>An OSINT (Open Source Intelligence) agent for security researchers and analysts: 27 investigation tools behind a natural-language interface, plus an MCP (Model Context Protocol) server so any MCP-compatible AI client can drive them directly.</p>
+  <p>An OSINT (Open Source Intelligence) agent for security researchers and analysts: 29 investigation tools behind a natural-language interface, plus an MCP (Model Context Protocol) server so any MCP-compatible AI client can drive them directly.</p>
   <p>Use it as a REPL, CLI, MCP server, or browser Web UI.</p>
   <p><em>Tool results come from real executions, and every finding is shown with the tool call that produced it. AI summaries are leads to verify, not proof.</em></p>
 </div>
@@ -95,9 +95,9 @@ Google Lens and TinEye provide their official upload/search pages.
 | Capability | Details |
 |---|---|
 | AI tool chaining | The agent selects and chains tools based on findings; describe the target in plain language |
-| 27 modular tools | Email, username, breach, WHOIS, RDAP, IP, subdomain, dorks, paste, phone, Shodan, VirusTotal, Censys, IP2Location, AbuseIPDB, GitHub, DNS, GDELT news geo, live dork search, URL scraping, SERP footprint |
+| 29 modular tools | Email, username, breach, WHOIS, RDAP, IP, subdomain, dorks, paste, phone, Shodan, VirusTotal, Censys, IP2Location, AbuseIPDB, GitHub, DNS, GDELT news geo, live dork search, URL scraping, SERP footprint |
 | Three AI backends | Anthropic Claude (default), local Ollama, or any OpenAI-compatible endpoint (LiteLLM, vLLM, LM Studio, ...) |
-| Native MCP server | 20 of the 27 tools are passive and on by default. The server lists 24 by default (those 20 plus 4 graph and batch helpers) and 31 with `--allow-active` ([Passive by default](#passive-by-default)); runs with `uvx`, no separate install |
+| Native MCP server | 21 of the 29 tools are passive and on by default. The server lists 25 by default (those 20 plus 4 graph and batch helpers) and 33 with `--allow-active` ([Passive by default](#passive-by-default)); runs with `uvx`, no separate install |
 | Parallel execution | `--parallel` runs complementary tools concurrently via `asyncio.gather()` |
 | Reports | PDF + Markdown auto-saved after every investigation (`reportlab` optional) |
 | Session history | All REPL sessions saved to `~/.openosint/history/`; browse with `openosint history` |
@@ -123,6 +123,8 @@ Google Lens and TinEye provide their official upload/search pages.
 
 | Tool | Powered by | What it investigates |
 |------|-----------|---------------------|
+| `list_debian_osint` | Existing Debian / Parallels inventory | Lists the twelve existing installed OSINT binaries without contacting targets |
+| `search_debian_osint` | Existing Debian / Parallels tools | Explicitly runs one selected Debian OSINT tool against a validated target *(noisy, off by default)* |
 | `search_email` | holehe | Social accounts linked to an email address *(noisy, off by default)* |
 | `search_username` | sherlock | Username presence across 400+ platforms *(noisy, off by default)* |
 | `search_breach` | HaveIBeenPwned v3 API | Data breach exposure |
@@ -160,6 +162,16 @@ Use the same V2 code and existing Mac installation for both modes:
 - `osint debian`: optional legacy Debian terminal entry, only when T9 is mounted (requires the existing Parallels VM).
 
 **Optional Debian tools:** with T9 mounted, the existing Parallels Debian VM is used on demand via `prlctl exec`, not the stale Debian SSH IP. Sherlock, Holehe and Sublist3r are available in the guest; PhoneInfoga is provided by the existing Mac binary. The existing `~/.config/h0m3/osint-debian-bin` bridges these for direct tool/agent calls. If T9 or Debian is missing, the Mac menu and all Mac tools remain available, and guest-only tools report unavailable rather than fabricating results. The guest's internet/DNS must actually work for its network-based tools to return findings. Active/noisy searches in the tools menu require explicit confirmation; the AI launcher preserves its existing `--allow-active` behavior.
+
+**The twelve existing Debian OSINT binaries** (verified executable in the original Debian VM):
+Sherlock, Maigret, Blackbird, Social Analyzer (usernames);
+Holehe, GHunt (email);
+PhoneInfoga, Ignorant (phone);
+theHarvester, Subfinder, WHOIS, SpiderFoot (domains).
+
+In **Tools kiezen**, choose `12 bestaande Debian OSINT-tools` and then one of those exact tools; a target value and explicit active-tool confirmation are required.
+In **osint ai**, the same existing collection is discoverable via the passive `list_debian_osint` tool, and any chosen tool can be invoked with `search_debian_osint` when active tools are allowed. The AI is never told that binary presence proves a successful search.
+These calls use the existing T9 Parallels VM and do not require the stale Debian SSH address; when T9 is absent, the Mac tools remain available. Live lookups in Debian currently still depend on repairing the guest's DNS/network connection.
 
 Original V1 is untouched. The V2 Mac repository remains the single source for both launchers (`scripts/osint_launcher.sh` and `scripts/debian_tool_bridge.py`). The live launchers are symlinks, not copies or additional OSINT installations.
 
@@ -221,6 +233,7 @@ A publicly reachable or demo instance can never enable active tools, whatever th
 | `graph_review_candidates` | passive | on | Reads the local graph database only. |
 | `investigate_graph` | inherits | on | Chains tools from a seed; in passive mode it routes only to passive tools. |
 | `investigate_multi` | inherits | on | Runs one agent per target under a shared tool-call cap; passive unless active is enabled. |
+| `list_debian_osint` | passive | on | Read-only list of the twelve existing Debian binaries, no live target probes. |
 | `scan_host_ports` | touches target | **off** | Opt-in Nmap TCP probes of exactly five ports on an authorized host; disabled by default. |
 | `scrape_url` | touches target | **off** | Bright Data fetches the URL, so the target's server logs a request (from Bright Data's IP, not yours). |
 | `search_abuseipdb` | passive | on | One request to api.abuseipdb.com. |
@@ -228,6 +241,7 @@ A publicly reachable or demo instance can never enable active tools, whatever th
 | `search_breach` | passive | on | One request to haveibeenpwned.com. |
 | `search_censys` | passive | on | Censys API; returns data Censys already holds. |
 | `search_certificates` | passive | on | Certificate Transparency index query to crt.sh; no target contact. |
+| `search_debian_osint` | noisy | **off** | Opt-in lookup using an existing Debian OSINT binary. Can contact third-party sites, take up to 120 seconds, or fail if the guest network is unavailable. |
 | `search_dns` | passive | on | Record lookups go through your DNS resolver; the target's nameservers see the resolver, not you. **Active part:** DKIM selector probes (enumeration) run only with active tools enabled. |
 | `search_domain` | noisy | **off** | sublist3r scrapes several search engines and aggregators from your IP; expect captchas and blocks. |
 | `search_dorks_live` | passive | on | Google results via Bright Data; the target is sent to those two services. |
@@ -995,7 +1009,7 @@ The port is published on `127.0.0.1` only, and the `Host` check is on (`OPENOSIN
   currently returns. A negative result (no breach found, no accounts found)
   means the source didn't report a match — not that no exposure exists.
 - **Most tools depend on third-party services you don't control.** Nine of
-  the 27 tools hard-require an API key and are subject to that provider's
+  the 29 tools hard-require an API key and are subject to that provider's
   uptime, rate limits, and pricing (Shodan, VirusTotal, Censys, AbuseIPDB,
   IP2Location, HaveIBeenPwned, and the three [Bright Data](https://get.brightdata.com/984ni58s2oad?utm_source=github&utm_medium=readme)¹–backed tools). Free
   tiers are small; heavy use requires a paid plan with the provider, not with

@@ -31,7 +31,7 @@ case "${1:-}" in
     if ! /usr/local/bin/prlctl status "Debian VM" 2>/dev/null | /usr/bin/grep -q 'exist running'; then
       /usr/local/bin/prlctl start "Debian VM" >&2 || exit $?
     fi
-    exec /usr/local/bin/prlctl exec "Debian VM" /usr/local/bin/osint "$@"
+    exec /usr/local/bin/prlctl exec "Debian VM" /usr/bin/env PATH=/usr/local/bin:/usr/bin:/bin /usr/local/bin/osint "$@"
     ;;
   *)
     # The keyless Mac tools menu never depends on Debian/T9.

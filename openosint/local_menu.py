@@ -25,6 +25,7 @@ from openosint.config_store import read_config, write_config
 from openosint.image_search import prepare_image_search
 from openosint.mcp_server import call_tool, list_tools
 from openosint.tool_policy import ENV_ALLOW_ACTIVE
+from openosint.tools.debian_collection import DEBIAN_TOOLS
 
 # Semantic colors: keep all themes OLED black with a dark selected row.
 PALETTES = {
@@ -49,6 +50,7 @@ TOOL_ITEMS = (
     ("search_email", "Holehe: e-mailaccounts (Debian)"),
     ("search_phone", "PhoneInfoga: telefoonnummers (Mac/Debian)"),
     ("search_domain", "Sublist3r: domeinen (Debian)"),
+    ("debian12", "12 bestaande Debian OSINT-tools"),
     ("search_dns", "DNS"), ("search_rdap", "RDAP"),
     ("search_ip", "IP-informatie"), ("search_greynoise", "GreyNoise IP"),
     ("file_metadata", "Metadata uit lokale foto"),
@@ -63,9 +65,11 @@ INPUT_KEYS = {
     "search_lens": "image_url",
     "search_username": "username", "search_email": "email",
     "search_phone": "phone", "search_domain": "domain",
+    "search_debian_osint": "target",
 }
 ACTIVE_MENU_TOOLS = frozenset({
-    "search_lens", "search_username", "search_email", "search_phone", "search_domain"
+    "search_lens", "search_username", "search_email", "search_phone", "search_domain",
+    "search_debian_osint",
 })
 
 
@@ -169,7 +173,9 @@ async def _prompt_value(prompt: PromptSession, label: str) -> str | None:
     return value or None
 
 
-async def _run_tool(name: str, value: str) -> tuple[str, bool]:
+async def _run_tool(
+    name: str, value: str, legacy_tool: str | None = None
+) -> tuple[str, bool]:
     if name == "image":
         try:
             result = prepare_image_search(value)
@@ -185,7 +191,12 @@ async def _run_tool(name: str, value: str) -> tuple[str, bool]:
         old_value = os.environ.get(ENV_ALLOW_ACTIVE)
         os.environ[ENV_ALLOW_ACTIVE] = "1"
         try:
-            answer = await call_tool(name, {INPUT_KEYS[name]: value})
+            arguments = {INPUT_KEYS[name]: value}
+            if name == "search_debian_osint":
+                if legacy_tool not in DEBIAN_TOOLS:
+                    return "Invalid Debian tool selection; nothing executed.", True
+                arguments["tool"] = legacy_tool
+            answer = await call_tool(name, arguments)
         finally:
             if old_value is None:
                 os.environ.pop(ENV_ALLOW_ACTIVE, None)
@@ -237,6 +248,7 @@ async def run_local_menu() -> None:
     prompt = PromptSession()
     last_full = ""
     while True:
+        legacy_tool = None
         action = await _choose(MAIN_ITEMS, prefs)
         if action in (None, "quit"):
             console.print("[#9A9FB4]OpenOSINT afgesloten.[/]")
@@ -271,7 +283,19 @@ async def run_local_menu() -> None:
             chosen = await _choose(TOOL_ITEMS, prefs)
             if chosen in (None, "back"):
                 continue
-            name = chosen
+            if chosen == "debian12":
+                legacy_tool = await _choose(
+                    tuple(
+                        (tool, f"{tool} · {spec.kind}")
+                        for tool, spec in DEBIAN_TOOLS.items()
+                    ) + (("back", "Terug"),),
+                    prefs,
+                )
+                if legacy_tool in (None, "back"):
+                    continue
+                name = "search_debian_osint"
+            else:
+                name = chosen
         elif action == "domain":
             chosen = await _choose((("search_certificates", "Certificaten"), ("search_archive", "Webarchief"), ("search_dns", "DNS"), ("search_rdap", "RDAP"), ("search_domain", "Sublist3r (Debian)"), ("back", "Terug")), prefs)
             if chosen in (None, "back"):
@@ -321,8 +345,8 @@ async def run_local_menu() -> None:
             if agreed != "go":
                 continue
         console.print("[#9A9FB4]Onderzoek gestart; status volgt uit de echte bron.[/]")
-        full, failure = await _run_tool(name, value)
-        last_full = f"Tool: {name}\nOnderzocht: {value}\n\n{full}"
+        full, failure = await _run_tool(name, value, legacy_tool=legacy_tool)
+        last_full = f"Tool: {legacy_tool or name}\nOnderzocht: {value}\n\n{full}"
         visible = _lens_brief(full) if name == "search_lens" and not failure else full
         _render(console, visible, error=failure)
         while True:

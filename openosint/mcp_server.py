@@ -49,6 +49,9 @@ from openosint.tool_policy import (  # noqa: E402
     disabled_result,
     is_tool_enabled,
 )
+from openosint.tools.debian_collection import DEBIAN_TOOLS  # noqa: E402
+from openosint.tools.debian_collection import catalog as debian_catalog  # noqa: E402
+from openosint.tools.debian_collection import search as debian_search  # noqa: E402
 from openosint.tools.extra_sources import (  # noqa: E402
     run_archive_osint,
     run_certificates_osint,
@@ -107,6 +110,19 @@ async def list_tools() -> list[Tool]:
 
 def _all_tools() -> list[Tool]:
     return [
+        Tool(
+            name="list_debian_osint",
+            description="List all TWELVE existing Debian OSINT binaries by name and search type, with current VM status. No target is contacted.",
+            inputSchema=_with_json({"type": "object", "properties": {}}),
+        ),
+        Tool(
+            name="search_debian_osint",
+            description="Run exactly ONE chosen, preinstalled OSINT tool in the existing Debian VM via Parallels. Supports 12 tools; requires active authorization and a running guest with network for live searches. Never scans without explicit target.",
+            inputSchema=_with_json({"type": "object", "properties": {
+                "tool": {"type": "string", "enum": list(DEBIAN_TOOLS)},
+                "target": {"type": "string", "description": "Authorized username, email, phone in E.164, or domain matching the selected tool."},
+            }, "required": ["tool", "target"]}),
+        ),
         Tool(name="search_greynoise", description="GreyNoise Community IP reputation lookup, limited free unauthenticated requests, optional GREYNOISE_API_KEY.", inputSchema=_with_json({"type":"object","properties":{"ip":{"type":"string"}},"required":["ip"]})),
         Tool(name="file_metadata", description="Local read-only EXIF/metadata extraction via ExifTool for image, video or PDF. Can include GPS tags. No upload.", inputSchema=_with_json({"type":"object","properties":{"path":{"type":"string"}},"required":["path"]})),
         Tool(name="search_certificates", description="Read public certificate transparency records for a domain via crt.sh (free, no key). Historical leads, not current DNS.", inputSchema=_with_json({"type":"object","properties":{"domain":{"type":"string"}},"required":["domain"]})),
@@ -542,7 +558,16 @@ def _all_tools() -> list[Tool]:
 
 
 # Map tool name → (coroutine factory, target key for JSON export)
+async def _list_debian_osint() -> str:
+    return debian_catalog()
+
+
 _HANDLERS: dict[str, tuple] = {
+    "list_debian_osint": (lambda a: _list_debian_osint(), lambda a: "Debian collection"),
+    "search_debian_osint": (
+        lambda a: debian_search(a["tool"], a["target"]),
+        lambda a: a["target"],
+    ),
     "search_greynoise": (lambda a: run_greynoise_osint(a["ip"]), lambda a: a["ip"]),
     "file_metadata": (lambda a: run_metadata_osint(a["path"]), lambda a: a["path"]),
     "search_certificates": (lambda a: run_certificates_osint(a["domain"]), lambda a: a["domain"]),
@@ -672,7 +697,17 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> CallToolResult:
             text = to_json(name, target, result)
         else:
             text = result
-        return CallToolResult(content=[TextContent(type="text", text=text)], isError=False)
+        failed = (
+            name == "search_debian_osint"
+            and any(
+                marker in result
+                for marker in (
+                    "Status: error", "Debian unavailable", "could not start",
+                    "not executable", "timed out", "tool launch error",
+                )
+            )
+        )
+        return CallToolResult(content=[TextContent(type="text", text=text)], isError=failed)
     except (KeyError, ValueError) as exc:
         logger.error("Validation error: %s", exc)
         return CallToolResult(content=[TextContent(type="text", text=str(exc))], isError=True)

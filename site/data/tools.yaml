@@ -1,3 +1,9 @@
+list_debian_osint:
+  method: Existing Debian / Parallels inventory
+  finds: Twelve installed OSINT tool names, input types, and VM availability
+search_debian_osint:
+  method: Existing Debian / Parallels OSINT binaries
+  finds: Opt-in public lookups using one selected tool from the twelve-tool collection
 search_email:
   method: holehe
   finds: Accounts linked to an email (noisy, off by default)

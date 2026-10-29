@@ -33,6 +33,9 @@ from openosint.tool_policy import (
     is_tool_enabled,
     use_budget,
 )
+from openosint.tools.debian_collection import DEBIAN_TOOLS
+from openosint.tools.debian_collection import catalog as debian_catalog
+from openosint.tools.debian_collection import search as debian_search
 from openosint.tools.extra_sources import (
     run_archive_osint,
     run_certificates_osint,
@@ -107,6 +110,27 @@ def default_anthropic_model() -> str:
 # ---------------------------------------------------------------------------
 
 TOOL_DEFINITIONS: list[dict[str, Any]] = [
+    {
+        "name": "list_debian_osint",
+        "description": "List all twelve existing Debian OSINT tools and current VM status without contacting any target.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "search_debian_osint",
+        "description": (
+            "Run one of the twelve existing Debian OSINT binaries via Parallels on the "
+            "authorized target. Active/noisy; may be unavailable if T9 or guest DNS fails. "
+            "Use list_debian_osint first for tool names and accepted target types."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "tool": {"type": "string", "enum": list(DEBIAN_TOOLS)},
+                "target": {"type": "string"},
+            },
+            "required": ["tool", "target"],
+        },
+    },
     {
         "name": "search_email",
         "description": (
@@ -533,7 +557,13 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
 # Tool executor (shared by both agents)
 # ---------------------------------------------------------------------------
 
+async def _debian_catalog_async() -> str:
+    return debian_catalog()
+
+
 _TOOL_MAP: dict[str, Any] = {
+    "list_debian_osint": lambda a: _debian_catalog_async(),
+    "search_debian_osint": lambda a: debian_search(a["tool"], a["target"]),
     "search_greynoise": lambda a: run_greynoise_osint(a["ip"]),
     "file_metadata": lambda a: run_metadata_osint(a["path"]),
     "search_certificates": lambda a: run_certificates_osint(a["domain"]),

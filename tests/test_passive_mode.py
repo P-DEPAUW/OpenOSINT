@@ -81,7 +81,7 @@ def test_every_tool_module_is_known():
         "search_github", "search_ip", "search_ip2location", "search_paste", "search_phone", "search_rdap",
         "search_shodan", "search_username", "search_virustotal", "search_whois",
         # helpers, not tools
-        "exceptions", "gdelt_gkg", "search_gdelt_doc", "extra_sources",
+         "exceptions", "gdelt_gkg", "search_gdelt_doc", "extra_sources", "debian_collection",
     }
     modules = {m.name for m in pkgutil.iter_modules(tools_pkg.__path__)}
     assert modules <= labeled_modules, f"new tool module(s) need a TOOL_POLICY entry: {modules - labeled_modules}"
