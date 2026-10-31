@@ -31,8 +31,8 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 
 from openosint import __version__
-from openosint.tool_policy import active_enabled, max_tool_calls
 from openosint.agent import OllamaAgent, OpenAICompatibleAgent, OpenOSINTAgent
+from openosint.tool_policy import active_enabled, max_tool_calls
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +62,40 @@ _TOOL_INFO_ROWS = [
     ("search_rdap", "RDAP (IANA bootstrap)", "Registrar, dates, name servers (keyless)"),
 ]
 
+# Navigation only: these are target types, not tool registrations or searches.
+# Some types need an AI-guided public-source search; they do not imply a
+# dedicated working tool or an independently verified identity.
+_SEARCH_CATEGORIES = (
+    ("Name", "public mentions and profiles"),
+    ("Username", "accounts and public profiles"),
+    ("Email address", "public accounts and data breaches"),
+    ("Phone number", "country, carrier and public mentions"),
+    ("IP address", "provider, ASN and reputation"),
+    ("Domain", "DNS, WHOIS, certificates and archives"),
+    ("Website / URL", "public website information and history"),
+    ("Photo / image", "metadata and reverse-image search"),
+    ("Company", "public company records and mentions"),
+    ("Location", "public place and address information"),
+    ("File / hash", "metadata and known hash references"),
+)
+
+
+def _print_search_list() -> None:
+    """Show the search categories locally without contacting Owen or any tool."""
+    from rich.text import Text
+
+    lines = Text()
+    for number, (category, detail) in enumerate(_SEARCH_CATEGORIES, 1):
+        lines.append(f"{number:>2}. {category:<18}", style="#79BAC8")
+        lines.append(detail + "\n", style="#B6A7C8")
+    lines.append("\nExample: investigate username exampleuser", style="#A78BFA")
+    lines.append(
+        "\nNo search started. Supported tools depend on the category and configuration.",
+        style="#9A9FB4",
+    )
+    console.print(Panel(lines, title="SEARCH LIST · WHAT DO YOU WANT TO INVESTIGATE?", border_style="#79658E", padding=(0, 1)))
+
+
 # ---------------------------------------------------------------------------
 # Rich console
 # ---------------------------------------------------------------------------
@@ -74,8 +108,8 @@ console = Console()
 
 PROMPT_STYLE = Style.from_dict(
     {
-        "prompt": "#00ff88 bold",
-        "prompt-text": "#f1f5f9",
+        "prompt": "#A78BFA bold",
+        "prompt-text": "#B6A7C8",
     }
 )
 
@@ -107,7 +141,7 @@ def _print_banner(provider: str, model: str) -> None:
         provider_info = f"[dim]Provider: Anthropic ({model})[/]"
 
     featured_line = _featured_integrations_line()
-    panel_content = f"[bold #00ff88]OpenOSINT[/] [dim]v{__version__}[/]  [dim]·[/]  {provider_info}"
+    panel_content = f"[bold #A78BFA]OpenOSINT[/] [dim]v{__version__}[/]  [dim]·[/]  {provider_info}"
     if featured_line:
         panel_content += f"\n{featured_line}"
 
@@ -115,13 +149,13 @@ def _print_banner(provider: str, model: str) -> None:
     console.print(
         Panel.fit(
             panel_content,
-            border_style="#1e293b",
+            border_style="#79658E",
             padding=(0, 2),
         )
     )
     if active_enabled():
         console.print(
-            "  [yellow]Active tools ON[/] [dim]— noisy tools may rate-limit or alert; "
+            "  [#C2A674]Active tools ON[/] [dim]— noisy tools may rate-limit or alert; "
             f"max {max_tool_calls()} tool calls per request[/]"
         )
     else:
@@ -130,10 +164,10 @@ def _print_banner(provider: str, model: str) -> None:
             f"Max {max_tool_calls()} tool calls per request. Restart with --allow-active for noisy tools.[/]"
         )
     console.print(
-        "  Type a target or question. [dim]'help'[/] for commands. [dim]'exit'[/] to quit.\n"
+        "  Type [#79BAC8]searchlist[/] for search categories. [dim]'help'[/] for commands. [dim]'exit'[/] to quit.\n"
     )
     Console(stderr=True).print(
-        "[yellow]⭐[/] [dim]If OpenOSINT is useful, star it → https://github.com/OpenOSINT/OpenOSINT[/]"
+        "[#A78BFA]⭐[/] [dim]If OpenOSINT is useful, star it → https://github.com/OpenOSINT/OpenOSINT[/]"
     )
 
 
@@ -145,14 +179,16 @@ def _print_help() -> None:
                 [
                     "[bold]Commands:[/]",
                     "",
-                    "  [#00ff88]<target>[/]          Investigate any target (email, username, domain, IP, name)",
-                    "  [#00ff88]clear[/]             Clear conversation memory",
-                    "  [#00ff88]save[/]              Save last report to reports/",
-                    "  [#00ff88]tools[/]             List available OSINT tools",
-                    "  [#00ff88]config[/]            Show current configuration",
-                    "  [#00ff88]history[/]           Browse saved session history",
-                    "  [#00ff88]help[/]              Show this message",
-                    "  [#00ff88]exit[/] / Ctrl-D     Exit",
+                    "  [#79BAC8]<target>[/]          Investigate any target (email, username, domain, IP, name)",
+                    "  [#79BAC8]clear[/]             Clear conversation memory",
+                    "  [#79BAC8]save[/]              Save complete result to reports/",
+                    "  [#79BAC8]full[/]              Show complete result",
+                    "  [#79BAC8]searchlist[/]        Search categories (no tool execution)",
+                    "  [#79BAC8]tools[/]             List available OSINT tools",
+                    "  [#79BAC8]config[/]            Show current configuration",
+                    "  [#79BAC8]history[/]           Browse saved session history",
+                    "  [#79BAC8]help[/]              Show this message",
+                    "  [#79BAC8]exit[/] / Ctrl-D     Exit",
                     "",
                     "[bold]Examples:[/]",
                     "",
@@ -164,7 +200,7 @@ def _print_help() -> None:
                 ]
             ),
             title="[bold]Help[/]",
-            border_style="#1e293b",
+            border_style="#79658E",
             padding=(0, 2),
         )
     )
@@ -176,13 +212,13 @@ def _print_tools() -> None:
 
     table = Table(
         box=box.SIMPLE_HEAD,
-        border_style="#1e293b",
-        header_style="bold #00ff88",
+        border_style="#79658E",
+        header_style="bold #A78BFA",
         show_header=True,
     )
-    table.add_column("Tool", style="#f1f5f9")
-    table.add_column("Method", style="dim")
-    table.add_column("Finds", style="#94a3b8")
+    table.add_column("Tool", style="#B6A7C8")
+    table.add_column("Method", style="#9A9FB4")
+    table.add_column("Finds", style="#A1A2B7")
 
     for row in _TOOL_INFO_ROWS:
         table.add_row(*row)
@@ -194,7 +230,7 @@ def _print_tools() -> None:
 
 def _print_tool_call(name: str, args: dict[str, Any]) -> None:
     arg_str = ", ".join(f"{k}={v!r}" for k, v in args.items())
-    console.print(f"  [dim]→[/] [#00ff88]{name}[/][dim]({arg_str})[/]")
+    console.print(f"  [dim]→[/] [#79BAC8]{name}[/][dim]({arg_str})[/]")
 
 
 def _print_result(content: str) -> None:
@@ -202,7 +238,8 @@ def _print_result(content: str) -> None:
     console.print(
         Panel(
             Markdown(content),
-            border_style="#00ff88",
+            style="#B6A7C8",
+            border_style="#79658E",
             padding=(1, 2),
         )
     )
@@ -213,8 +250,8 @@ def _print_error(message: str) -> None:
     console.print()
     console.print(
         Panel(
-            f"[bold red]Error:[/] {message}",
-            border_style="red",
+            f"[bold #C68F99]Error:[/] {message}",
+            border_style="#C68F99",
             padding=(0, 2),
         )
     )
@@ -249,7 +286,7 @@ def _print_config(
         Panel(
             "\n".join(rows),
             title="[bold]Configuration[/]",
-            border_style="#1e293b",
+            border_style="#79658E",
             padding=(0, 2),
         )
     )
@@ -358,7 +395,11 @@ class OpenOSINTRepl:
 
         if response.content:
             self._last_response = response.content
-            _print_result(response.content)
+            from openosint.local_menu import _preview
+            visible, hidden = _preview(response.content)
+            _print_result(visible)
+            if hidden:
+                console.print(f"  [#C2A674]Nog {hidden} regels verborgen. Typ 'full' voor alles of 'save' voor het volledige rapport.[/]")
 
         # Auto-save structured report
         if "##" in response.content and len(response.content) > _MIN_REPORT_CHARS:
@@ -443,6 +484,10 @@ class OpenOSINTRepl:
                     _print_help()
                     continue
 
+                if user_input.lower() in ("searchlist", "/searchlist", "categories", "zoeklijst", "/zoeklijst"):
+                    _print_search_list()
+                    continue
+
                 if user_input.lower() == "tools":
                     _print_tools()
                     continue
@@ -461,6 +506,13 @@ class OpenOSINTRepl:
                         self._is_pdf_disabled,
                         self._openai_base_url,
                     )
+                    continue
+
+                if user_input.lower() == "full":
+                    if self._last_response:
+                        _print_result(self._last_response)
+                    else:
+                        console.print("  [#9A9FB4]Nog geen resultaat.[/]")
                     continue
 
                 if user_input.lower() == "save":

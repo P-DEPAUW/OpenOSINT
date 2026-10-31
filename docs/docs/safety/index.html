@@ -220,6 +220,12 @@
 </thead>
 <tbody>
 <tr>
+<td><code>file_metadata</code></td>
+<td>passive</td>
+<td>on</td>
+<td>Reads metadata from a local image/video/PDF with ExifTool; no upload or changes.</td>
+</tr>
+<tr>
 <td><code>generate_dorks</code></td>
 <td>passive</td>
 <td>on</td>
@@ -256,6 +262,18 @@
 <td>Runs one agent per target under a shared tool-call cap; passive unless active is enabled.</td>
 </tr>
 <tr>
+<td><code>list_debian_osint</code></td>
+<td>passive</td>
+<td>on</td>
+<td>Read-only list of the twelve existing Debian binaries, no live target probes.</td>
+</tr>
+<tr>
+<td><code>scan_host_ports</code></td>
+<td>touches target</td>
+<td><strong>off</strong></td>
+<td>Opt-in Nmap TCP probes of exactly five ports on an authorized host; disabled by default.</td>
+</tr>
+<tr>
 <td><code>scrape_url</code></td>
 <td>touches target</td>
 <td><strong>off</strong></td>
@@ -268,6 +286,12 @@
 <td>One request to api.abuseipdb.com.</td>
 </tr>
 <tr>
+<td><code>search_archive</code></td>
+<td>passive</td>
+<td>on</td>
+<td>Wayback index search; no target contact; results may be outdated.</td>
+</tr>
+<tr>
 <td><code>search_breach</code></td>
 <td>passive</td>
 <td>on</td>
@@ -278,6 +302,18 @@
 <td>passive</td>
 <td>on</td>
 <td>Censys API; returns data Censys already holds.</td>
+</tr>
+<tr>
+<td><code>search_certificates</code></td>
+<td>passive</td>
+<td>on</td>
+<td>Certificate Transparency index query to crt.sh; no target contact.</td>
+</tr>
+<tr>
+<td><code>search_debian_osint</code></td>
+<td>noisy</td>
+<td><strong>off</strong></td>
+<td>Opt-in lookup using an existing Debian OSINT binary. Can contact third-party sites, take up to 120 seconds, or fail if the guest network is unavailable.</td>
 </tr>
 <tr>
 <td><code>search_dns</code></td>
@@ -322,6 +358,12 @@
 <td>A few requests to api.github.com.</td>
 </tr>
 <tr>
+<td><code>search_greynoise</code></td>
+<td>passive</td>
+<td>on</td>
+<td>Free community reputation lookup via GreyNoise for public IPs; quota varies.</td>
+</tr>
+<tr>
 <td><code>search_ip</code></td>
 <td>passive</td>
 <td>on</td>
@@ -332,6 +374,12 @@
 <td>passive</td>
 <td>on</td>
 <td>One request to api.ip2location.io.</td>
+</tr>
+<tr>
+<td><code>search_lens</code></td>
+<td>touches target</td>
+<td><strong>off</strong></td>
+<td>Opt-in SerpApi Google Lens lookup; sends public image URL to a third party and may cause it to fetch that image. Uses an optional SerpApi account key for live matches.</td>
 </tr>
 <tr>
 <td><code>search_paste</code></td>

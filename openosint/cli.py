@@ -31,6 +31,7 @@ import logging  # noqa: E402
 import os  # noqa: E402
 import sys  # noqa: E402
 
+from openosint.image_search import prepare_image_search  # noqa: E402
 from openosint.json_output import format_tool_result  # noqa: E402
 from openosint.proxy import (  # noqa: E402
     ProxyConfigError,
@@ -43,6 +44,14 @@ from openosint.tool_policy import (  # noqa: E402
     disabled_result,
     humanize,
     is_tool_enabled,
+)
+from openosint.tools.extra_sources import (  # noqa: E402
+    run_archive_osint,
+    run_certificates_osint,
+    run_greynoise_osint,
+    run_lens_osint,
+    run_metadata_osint,
+    run_nmap_osint,
 )
 from openosint.tools.scrape_url import run_scrape_url_osint  # noqa: E402
 from openosint.tools.search_abuseipdb import run_abuseipdb_osint  # noqa: E402
@@ -246,6 +255,12 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Start the interactive REPL (default when no command given).",
     )
 
+    # ai — explicitly request the existing local Qwen-powered terminal agent.
+    # This is a mode switch, not a second installation or a separate agent.
+    subparsers.add_parser(
+        "ai", help="Start OpenOSINT AI with local Qwen 3.5 4B (Ollama)."
+    )
+
     # email
     email_cmd = subparsers.add_parser(
         "email",
@@ -260,6 +275,24 @@ def _build_parser() -> argparse.ArgumentParser:
         metavar="SECONDS",
         help="Maximum execution time (default: 120).",
     )
+
+    # image -- passive, no upload, no browser side-effects
+    image_cmd = subparsers.add_parser(
+        "image", help="Prepare reverse-image searches (never uploads automatically)."
+    )
+    image_cmd.add_argument("source", nargs="?", metavar="PHOTO_PATH_OR_HTTPS_URL")
+
+    # Free passive sources and optional active tools; no AI or extra environment needed.
+    for name, help_text, arg_name in (
+        ("greynoise", "GreyNoise public IP reputation (limited free API).", "PUBLIC_IP"),
+        ("metadata", "Read local image/video/PDF metadata via ExifTool (no upload).", "FILE_PATH"),
+        ("certs", "Certificate Transparency search (Cert Spotter/crt.sh).", "DOMAIN"),
+        ("archive", "Historical URLs (Internet Archive CDX, no key).", "DOMAIN"),
+        ("lens", "Google Lens reverse-image: public URL or local JPG/PNG/WebP (SerpApi key + --allow-active; local files uploaded).", "IMAGE_URL_OR_LOCAL_PATH"),
+        ("ports", "Authorized 5-port Nmap scan (requires --allow-active).", "TARGET"),
+    ):
+        cmd = subparsers.add_parser(name, help=help_text)
+        cmd.add_argument("target", metavar=arg_name)
 
     # username
     username_cmd = subparsers.add_parser(
@@ -523,8 +556,8 @@ def _build_parser() -> argparse.ArgumentParser:
     footprint_cmd = subparsers.add_parser(
         "footprint",
         help=(
-            "Entity-type-aware SERP footprint via Bright Data (no AI). "
-            "Requires BRIGHTDATA_API_KEY and BRIGHTDATA_SERP_ZONE."
+            "Entity-type-aware search (no AI). Uses Bright Data when configured "
+            "or free public search otherwise."
         ),
     )
     footprint_cmd.add_argument(
@@ -662,7 +695,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 # Direct subcommands that run one non-passive tool; refused up front in passive mode.
-_COMMAND_TOOLS = {"email": "search_email", "username": "search_username", "scrape": "scrape_url"}
+_COMMAND_TOOLS = {"email": "search_email", "username": "search_username", "scrape": "scrape_url", "lens": "search_lens", "ports": "scan_host_ports"}
 
 
 def _print_result(result: str) -> None:
@@ -1147,8 +1180,24 @@ def _handle_history(args: argparse.Namespace) -> None:
 
 
 async def _async_main() -> None:
+    # Existing Mac/T9 arrangement: local OSINT always works; optional Debian
+    # binaries are reached through the *existing* OSINT bridge when T9 is mounted.
+    # No VM is booted merely by opening OpenOSINT.
+    if sys.platform == "darwin" and os.path.ismount("/Volumes/T9"):
+        bridge = os.path.join(
+            os.path.expanduser("~"), ".config", "h0m3", "osint-debian-bin"
+        )
+        if os.path.isfile(os.path.join(bridge, "remote-tool")):
+            os.environ["PATH"] = bridge + os.pathsep + os.environ.get("PATH", "")
+
     parser = _build_parser()
     args = parser.parse_args()
+    if args.command == "ai":
+        args.command = None
+        args.provider = "ollama"
+        args.ollama_model = "qwen3.5:4b"
+        args.ollama_host = "http://127.0.0.1:11434"
+        args.allow_active = True
     _configure_logging(args.verbose)
     if args.allow_active:
         os.environ[ENV_ALLOW_ACTIVE] = "1"
@@ -1165,6 +1214,21 @@ async def _async_main() -> None:
         sys.exit(1)
     if proxy_url:
         print(f"[*] Upstream proxy active: {redact_proxy_url(proxy_url)}", file=sys.stderr)
+
+    # On an interactive Mac without a paid AI key, launch the existing tools
+    # through a local keyboard menu instead of an unusable API-key error.
+    # Explicit AI providers/API-key sessions and all direct CLI commands
+    # retain their original behavior.
+    if (
+        args.command in (None, "shell")
+        and getattr(args, "provider", "anthropic") == "anthropic"
+        and not (getattr(args, "api_key", None) or os.environ.get("ANTHROPIC_API_KEY"))
+        and sys.stdin.isatty()
+    ):
+        from openosint.local_menu import run_local_menu
+
+        await run_local_menu()
+        return
 
     # No subcommand or explicit 'shell' → launch REPL.
     # Await directly — run_repl() is a sync wrapper that calls asyncio.run()
@@ -1219,6 +1283,34 @@ async def _async_main() -> None:
         await _handle_email(
             args.target, args.timeout, is_parallel=is_parallel, json_output=json_output
         )
+    elif args.command == "image":
+        try:
+            result = prepare_image_search(args.source)
+        except (ValueError, OSError) as exc:
+            print(f"[!] Image search input error: {exc}", file=sys.stderr)
+            sys.exit(2)
+        if json_output:
+            _emit_json(result)
+        else:
+            print("Image search options (no photo uploaded):")
+            for provider in result["providers"]:
+                print(f"  {provider['name']}: {provider['url']}")
+                print(f"    {provider['how']}")
+            print(result["note"])
+    elif args.command in ("certs", "archive", "lens", "ports", "greynoise", "metadata"):
+        fns = {"greynoise": run_greynoise_osint, "metadata": run_metadata_osint, "certs": run_certificates_osint, "archive": run_archive_osint,
+               "lens": run_lens_osint, "ports": run_nmap_osint}
+        names = {"greynoise": "search_greynoise", "metadata": "file_metadata", "certs": "search_certificates", "archive": "search_archive",
+                 "lens": "search_lens", "ports": "scan_host_ports"}
+        try:
+            result = await fns[args.command](args.target)
+        except ValueError as exc:
+            print(f"[!] Invalid input: {exc}", file=sys.stderr)
+            sys.exit(2)
+        if json_output:
+            _emit_json(format_tool_result(names[args.command], args.target, result))
+        else:
+            print(result)
     elif args.command == "username":
         await _handle_username(
             args.target, args.timeout, is_parallel=is_parallel, json_output=json_output

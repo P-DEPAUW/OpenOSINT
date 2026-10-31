@@ -24,27 +24,6 @@ from typing import Any
 
 import anthropic
 
-from openosint.tools.generate_dorks import run_dork_osint
-from openosint.tools.scrape_url import run_scrape_url_osint
-from openosint.tools.search_abuseipdb import run_abuseipdb_osint
-from openosint.tools.search_breach import run_breach_osint
-from openosint.tools.search_censys import run_censys_osint
-from openosint.tools.search_dns import run_dns_osint
-from openosint.tools.search_rdap import run_rdap_osint
-from openosint.tools.search_domain import run_domain_osint
-from openosint.tools.search_dorks_live import run_dorks_live_osint
-from openosint.tools.search_email import run_email_osint
-from openosint.tools.search_gdelt_geo import run_gdelt_geo_osint, split_geojson_fence
-from openosint.tools.search_github import run_github_osint
-from openosint.tools.search_ip import run_ip_osint
-from openosint.tools.search_ip2location import run_ip2location_osint
-from openosint.tools.search_paste import run_paste_osint
-from openosint.tools.search_phone import run_phone_osint
-from openosint.tools.search_shodan import run_shodan_osint
-from openosint.tools.search_username import run_username_osint
-from openosint.tools.search_virustotal import run_virustotal_osint
-from openosint.tools.search_whois import run_whois_osint
-from openosint.tools.search_footprint import run_footprint_osint
 from openosint.pivot import investigate_graph_for_agent
 from openosint.tool_policy import (
     ToolBudget,
@@ -54,6 +33,38 @@ from openosint.tool_policy import (
     is_tool_enabled,
     use_budget,
 )
+from openosint.tools.debian_collection import DEBIAN_TOOLS
+from openosint.tools.debian_collection import catalog as debian_catalog
+from openosint.tools.debian_collection import search as debian_search
+from openosint.tools.extra_sources import (
+    run_archive_osint,
+    run_certificates_osint,
+    run_greynoise_osint,
+    run_lens_osint,
+    run_metadata_osint,
+    run_nmap_osint,
+)
+from openosint.tools.generate_dorks import run_dork_osint
+from openosint.tools.scrape_url import run_scrape_url_osint
+from openosint.tools.search_abuseipdb import run_abuseipdb_osint
+from openosint.tools.search_breach import run_breach_osint
+from openosint.tools.search_censys import run_censys_osint
+from openosint.tools.search_dns import run_dns_osint
+from openosint.tools.search_domain import run_domain_osint
+from openosint.tools.search_dorks_live import run_dorks_live_osint
+from openosint.tools.search_email import run_email_osint
+from openosint.tools.search_footprint import run_footprint_osint
+from openosint.tools.search_gdelt_geo import run_gdelt_geo_osint, split_geojson_fence
+from openosint.tools.search_github import run_github_osint
+from openosint.tools.search_ip import run_ip_osint
+from openosint.tools.search_ip2location import run_ip2location_osint
+from openosint.tools.search_paste import run_paste_osint
+from openosint.tools.search_phone import run_phone_osint
+from openosint.tools.search_rdap import run_rdap_osint
+from openosint.tools.search_shodan import run_shodan_osint
+from openosint.tools.search_username import run_username_osint
+from openosint.tools.search_virustotal import run_virustotal_osint
+from openosint.tools.search_whois import run_whois_osint
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +110,27 @@ def default_anthropic_model() -> str:
 # ---------------------------------------------------------------------------
 
 TOOL_DEFINITIONS: list[dict[str, Any]] = [
+    {
+        "name": "list_debian_osint",
+        "description": "List all twelve existing Debian OSINT tools and current VM status without contacting any target.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "search_debian_osint",
+        "description": (
+            "Run one of the twelve existing Debian OSINT binaries via Parallels on the "
+            "authorized target. Active/noisy; may be unavailable if T9 or guest DNS fails. "
+            "Use list_debian_osint first for tool names and accepted target types."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "tool": {"type": "string", "enum": list(DEBIAN_TOOLS)},
+                "target": {"type": "string"},
+            },
+            "required": ["tool", "target"],
+        },
+    },
     {
         "name": "search_email",
         "description": (
@@ -335,6 +367,36 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
         },
     },
     {
+        "name": "search_greynoise",
+        "description": "GreyNoise Community reputation for public IP, limited free access, optional GREYNOISE_API_KEY.",
+        "input_schema": {"type":"object","properties":{"ip":{"type":"string"}},"required":["ip"]},
+    },
+    {
+        "name": "file_metadata",
+        "description": "Read local media/PDF metadata with ExifTool; never uploads. May contain sensitive GPS.",
+        "input_schema": {"type":"object","properties":{"path":{"type":"string"}},"required":["path"]},
+    },
+    {
+        "name": "search_certificates",
+        "description": "Retrieve public certificate transparency subdomain history from crt.sh, no key, historical only.",
+        "input_schema": {"type":"object","properties":{"domain":{"type":"string"}},"required":["domain"]},
+    },
+    {
+        "name": "search_archive",
+        "description": "Retrieve public historical URLs of a domain from the Wayback Machine index, no key.",
+        "input_schema": {"type":"object","properties":{"domain":{"type":"string"}},"required":["domain"]},
+    },
+    {
+        "name": "search_lens",
+        "description": "OPT-IN: Google Lens image URL reverse search; sends URL to SerpApi, needs a SerpApi account and active mode. Never uploads local photos.",
+        "input_schema": {"type":"object","properties":{"image_url":{"type":"string"}},"required":["image_url"]},
+    },
+    {
+        "name": "scan_host_ports",
+        "description": "OPT-IN: limited Nmap TCP ports (22,80,443,445,8080) on AUTHORIZED hosts. Requires active mode.",
+        "input_schema": {"type":"object","properties":{"target":{"type":"string"}},"required":["target"]},
+    },
+    {
         "name": "search_rdap",
         "description": (
             "Structured domain registration lookup via RDAP, the machine-readable successor to WHOIS: "
@@ -428,7 +490,7 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "returning live structured results (title, URL, snippet). "
             "Use after generate_dorks when you need actual search results, not just URLs. "
             "Runs up to 5 dorks by default — each is a billable API call. "
-            "Uses BRIGHTDATA_API_KEY and BRIGHTDATA_SERP_ZONE."
+            "Uses Bright Data when configured; otherwise existing free SerpApi quota or public search."
         ),
         "input_schema": {
             "type": "object",
@@ -469,7 +531,7 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "entity-type-aware Google queries, returning structured results (title, URL, snippet) "
             "and Entity Correlation Graph nodes/edges for discovered domains and profiles. "
             "Use when you need a targeted, type-aware SERP sweep rather than generic dork URLs. "
-            "Uses BRIGHTDATA_API_KEY and BRIGHTDATA_SERP_ZONE."
+            "Uses Bright Data when configured; otherwise existing free SerpApi quota or public search."
         ),
         "input_schema": {
             "type": "object",
@@ -495,7 +557,19 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
 # Tool executor (shared by both agents)
 # ---------------------------------------------------------------------------
 
+async def _debian_catalog_async() -> str:
+    return debian_catalog()
+
+
 _TOOL_MAP: dict[str, Any] = {
+    "list_debian_osint": lambda a: _debian_catalog_async(),
+    "search_debian_osint": lambda a: debian_search(a["tool"], a["target"]),
+    "search_greynoise": lambda a: run_greynoise_osint(a["ip"]),
+    "file_metadata": lambda a: run_metadata_osint(a["path"]),
+    "search_certificates": lambda a: run_certificates_osint(a["domain"]),
+    "search_archive": lambda a: run_archive_osint(a["domain"]),
+    "search_lens": lambda a: run_lens_osint(a["image_url"]),
+    "scan_host_ports": lambda a: run_nmap_osint(a["target"]),
     "search_email": lambda a: run_email_osint(a["email"], timeout_seconds=120),
     "search_username": lambda a: run_username_osint(a["username"], timeout_seconds=180),
     "search_breach": lambda a: run_breach_osint(a["email"], timeout_seconds=15),

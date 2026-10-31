@@ -3,7 +3,7 @@ mcp-name: io.github.OpenOSINT/openosint
 <div align="center">
   <img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/docs/logo.svg" alt="OpenOSINT" width="200" />
   <h1>OpenOSINT</h1>
-  <p>An OSINT (Open Source Intelligence) agent for security researchers and analysts: 21 investigation tools behind a natural-language interface, plus an MCP (Model Context Protocol) server so any MCP-compatible AI client can drive them directly.</p>
+  <p>An OSINT (Open Source Intelligence) agent for security researchers and analysts: 29 investigation tools behind a natural-language interface, plus an MCP (Model Context Protocol) server so any MCP-compatible AI client can drive them directly.</p>
   <p>Use it as a REPL, CLI, MCP server, or browser Web UI.</p>
   <p><em>Tool results come from real executions, and every finding is shown with the tool call that produced it. AI summaries are leads to verify, not proof.</em></p>
 </div>
@@ -71,14 +71,33 @@ openosint > investigate example.com
   Report saved -> reports/2026-05-11_14-32-11_report.md
 ```
 
+## Reverse-image search (manual and private by default)
+
+The optional `image` CLI command provides a safe starting point for tracing where a
+photo appears online. It does **not** upload the photo, perform a search itself,
+identify a person, or claim to find a username. You decide whether to submit
+the image to Google Lens, TinEye or Yandex Images. Check any public profiles
+found independently; matching images alone cannot verify someone's identity.
+
+```bash
+openosint image ~/Pictures/photo.jpg
+openosint image 'https://example.org/photo.jpg'
+openosint --json image
+```
+
+Local JPG, PNG, GIF, TIFF, BMP, WebP, HEIC and AVIF files are checked by
+file signature. The command never opens a browser or contacts a search provider.
+For online images, the Yandex link can pre-fill the source URL when supported;
+Google Lens and TinEye provide their official upload/search pages.
+
 ## Features
 
 | Capability | Details |
 |---|---|
 | AI tool chaining | The agent selects and chains tools based on findings; describe the target in plain language |
-| 21 modular tools | Email, username, breach, WHOIS, RDAP, IP, subdomain, dorks, paste, phone, Shodan, VirusTotal, Censys, IP2Location, AbuseIPDB, GitHub, DNS, GDELT news geo, live dork search, URL scraping, SERP footprint |
+| 29 modular tools | Email, username, breach, WHOIS, RDAP, IP, subdomain, dorks, paste, phone, Shodan, VirusTotal, Censys, IP2Location, AbuseIPDB, GitHub, DNS, GDELT news geo, live dork search, URL scraping, SERP footprint |
 | Three AI backends | Anthropic Claude (default), local Ollama, or any OpenAI-compatible endpoint (LiteLLM, vLLM, LM Studio, ...) |
-| Native MCP server | 16 of the 21 tools are passive and on by default. The server lists 20 by default (those 16 plus 4 graph and batch helpers) and 25 with `--allow-active` ([Passive by default](#passive-by-default)); runs with `uvx`, no separate install |
+| Native MCP server | 21 of the 29 tools are passive and on by default. The server lists 25 by default (those 20 plus 4 graph and batch helpers) and 33 with `--allow-active` ([Passive by default](#passive-by-default)); runs with `uvx`, no separate install |
 | Parallel execution | `--parallel` runs complementary tools concurrently via `asyncio.gather()` |
 | Reports | PDF + Markdown auto-saved after every investigation (`reportlab` optional) |
 | Session history | All REPL sessions saved to `~/.openosint/history/`; browse with `openosint history` |
@@ -104,6 +123,8 @@ openosint > investigate example.com
 
 | Tool | Powered by | What it investigates |
 |------|-----------|---------------------|
+| `list_debian_osint` | Existing Debian / Parallels inventory | Lists the twelve existing installed OSINT binaries without contacting targets |
+| `search_debian_osint` | Existing Debian / Parallels tools | Explicitly runs one selected Debian OSINT tool against a validated target *(noisy, off by default)* |
 | `search_email` | holehe | Social accounts linked to an email address *(noisy, off by default)* |
 | `search_username` | sherlock | Username presence across 400+ platforms *(noisy, off by default)* |
 | `search_breach` | HaveIBeenPwned v3 API | Data breach exposure |
@@ -125,6 +146,53 @@ openosint > investigate example.com
 | `search_dorks_live` | [Bright Data](https://get.brightdata.com/984ni58s2oad?utm_source=github&utm_medium=readme)¹ SERP API | Live Google search results for dork queries (title, URL, snippet) |
 | `scrape_url` | [Bright Data](https://get.brightdata.com/984ni58s2oad?utm_source=github&utm_medium=readme) Web Unlocker | Fetch any URL bypassing Cloudflare/CAPTCHA — returns clean Markdown *(touches the target, off by default)* |
 | `search_footprint` | [Bright Data](https://get.brightdata.com/984ni58s2oad?utm_source=github&utm_medium=readme) SERP API | Entity-type-aware public search-engine footprint: detects email/username/domain/phone/name and returns structured results + Entity Correlation Graph nodes/edges |
+| `search_certificates` | Cert Spotter / crt.sh | Certificate Transparency subdomains (historical; no key for limited queries) |
+| `search_archive` | Internet Archive CDX / Availability | Archived URLs / nearest snapshot (no key) |
+| `search_greynoise` | GreyNoise Community | IP reputation; free anonymous allowance is limited |
+| `file_metadata` | ExifTool on Mac | Read-only local media/PDF metadata, including optional GPS |
+| `search_lens` | SerpApi Google Lens | Opt-in visual matching of a public image URL; account key needed |
+| `scan_host_ports` | Nmap on Mac | Opt-in authorized 5-port TCP scan (active) |
+
+### Mac Air: two OSINT modes, one existing installation
+
+Use the same V2 code and existing Mac installation for both modes:
+
+- `osint` (or `openosint`): **tools-only** dark keyboard menu; usable without T9 or Debian.
+- `osint ai` (or `openosint ai`): **AI agent**, Qwen 3.5 4B via local Ollama. In the chat, enter a name, username, email or IP directly, or type `searchlist` for the English category guide. The agent chooses among the currently enabled tools.
+- `osint debian`: optional legacy Debian terminal entry, only when T9 is mounted (requires the existing Parallels VM).
+
+**Optional Debian tools:** with T9 mounted, the existing Parallels Debian VM is used on demand via `prlctl exec`, not the stale Debian SSH IP. Sherlock, Holehe and Sublist3r are available in the guest; PhoneInfoga is provided by the existing Mac binary. The existing `~/.config/h0m3/osint-debian-bin` bridges these for direct tool/agent calls. If T9 or Debian is missing, the Mac menu and all Mac tools remain available, and guest-only tools report unavailable rather than fabricating results. The guest's internet/DNS must actually work for its network-based tools to return findings. Active/noisy searches in the tools menu require explicit confirmation; the AI launcher preserves its existing `--allow-active` behavior.
+
+**The twelve existing Debian OSINT binaries** (verified executable in the original Debian VM):
+Sherlock, Maigret, Blackbird, Social Analyzer (usernames);
+Holehe, GHunt (email);
+PhoneInfoga, Ignorant (phone);
+theHarvester, Subfinder, WHOIS, SpiderFoot (domains).
+
+In **Tools kiezen**, choose `12 bestaande Debian OSINT-tools` and then one of those exact tools; a target value and explicit active-tool confirmation are required.
+In **osint ai**, the same existing collection is discoverable via the passive `list_debian_osint` tool, and any chosen tool can be invoked with `search_debian_osint` when active tools are allowed. The AI is never told that binary presence proves a successful search.
+These calls use the existing T9 Parallels VM and do not require the stale Debian SSH address; when T9 is absent, the Mac tools remain available. Live lookups in Debian currently still depend on repairing the guest's DNS/network connection.
+
+Original V1 is untouched. The V2 Mac repository remains the single source for both launchers (`scripts/osint_launcher.sh` and `scripts/debian_tool_bridge.py`). The live launchers are symlinks, not copies or additional OSINT installations.
+
+### Mac Air: direct commands and MCP
+
+Run `openosint` on Mac Air to open the dark keyboard menu even when no AI API key is configured. Use Up/Down and Enter, Escape to return. Choose Tools > Photo for image search links; the image is not uploaded. Results are short by default, and Full / Save preserves all source text. An explicitly configured AI provider still opens the original interactive AI shell. Inside the existing AI terminal chat (including local Owen/Ollama), type `searchlist` to show 11 English investigation categories (name, username, email, phone, IP, domain, website, photo, company, location, file/hash). This is a local help list, not another OSINT tool, an AI request, or a scan. Type `tools` for the separate technical tool catalog.
+
+Run the checked-out version with `openosint` from Terminal (the separate Python environment is on Mac Air; no T9, NAS, Debian VM or server is needed for the new functions):
+
+```bash
+openosint certs example.com
+openosint archive example.com
+openosint greynoise 1.1.1.1
+openosint metadata /path/to/local/photo.jpg
+openosint --json image
+openosint-mcp
+```
+
+`openosint --allow-active ports <authorized-host>` is an active five-port TCP check. `openosint --allow-active lens <public-https-image-url>` sends the URL to SerpApi and needs `SERPAPI_API_KEY`. Neither runs in the default passive mode. The standalone stdio MCP server is for compatible local MCP clients; ChatGPT itself needs an authorized custom-MCP connection or an existing remote-control connector to reach it. An MCP server does **not** grant repository write access by itself.
+
+Source catalogs reviewed for extension ideas (no extra installations, copies, or independent runtimes): [OpenOSINT upstream](https://github.com/OpenOSINT/OpenOSINT), [SpiderFoot](https://github.com/smicallef/spiderfoot), [Recon-ng](https://github.com/lanmaster53/recon-ng), and the [OSINT Framework resources index](https://github.com/lockfale/OSINT-Framework). Integrations added here are separately implemented against their official provider interfaces; API credentials remain optional except live Lens results. The index lists third-party websites, not a universal API or guarantee they are accessible today.
 
 Full per-tool documentation, CLI flags, and output formats: [openosint.tech](https://openosint.tech/).
 
@@ -158,16 +226,22 @@ A publicly reachable or demo instance can never enable active tools, whatever th
 <!-- NOISE-TABLE:START (generated by `python -m openosint.tool_policy`; do not edit by hand) -->
 | Tool | Level | Default | What it actually sends, and where |
 |---|---|---|---|
+| `file_metadata` | passive | on | Reads metadata from a local image/video/PDF with ExifTool; no upload or changes. |
 | `generate_dorks` | passive | on | Builds Google search URLs locally; sends nothing. |
 | `graph_export` | passive | on | Reads the local graph database only. |
 | `graph_neighbors` | passive | on | Reads the local graph database only. |
 | `graph_review_candidates` | passive | on | Reads the local graph database only. |
 | `investigate_graph` | inherits | on | Chains tools from a seed; in passive mode it routes only to passive tools. |
 | `investigate_multi` | inherits | on | Runs one agent per target under a shared tool-call cap; passive unless active is enabled. |
+| `list_debian_osint` | passive | on | Read-only list of the twelve existing Debian binaries, no live target probes. |
+| `scan_host_ports` | touches target | **off** | Opt-in Nmap TCP probes of exactly five ports on an authorized host; disabled by default. |
 | `scrape_url` | touches target | **off** | Bright Data fetches the URL, so the target's server logs a request (from Bright Data's IP, not yours). |
 | `search_abuseipdb` | passive | on | One request to api.abuseipdb.com. |
+| `search_archive` | passive | on | Wayback index search; no target contact; results may be outdated. |
 | `search_breach` | passive | on | One request to haveibeenpwned.com. |
 | `search_censys` | passive | on | Censys API; returns data Censys already holds. |
+| `search_certificates` | passive | on | Certificate Transparency index query to crt.sh; no target contact. |
+| `search_debian_osint` | noisy | **off** | Opt-in lookup using an existing Debian OSINT binary. Can contact third-party sites, take up to 120 seconds, or fail if the guest network is unavailable. |
 | `search_dns` | passive | on | Record lookups go through your DNS resolver; the target's nameservers see the resolver, not you. **Active part:** DKIM selector probes (enumeration) run only with active tools enabled. |
 | `search_domain` | noisy | **off** | sublist3r scrapes several search engines and aggregators from your IP; expect captchas and blocks. |
 | `search_dorks_live` | passive | on | Google results via Bright Data; the target is sent to those two services. |
@@ -175,8 +249,10 @@ A publicly reachable or demo instance can never enable active tools, whatever th
 | `search_footprint` | passive | on | Up to 3 Google queries via Bright Data; the target is sent to those two services. |
 | `search_gdelt_geo` | passive | on | Downloads GDELT's public news feed and filters it locally; your search term never leaves your machine. |
 | `search_github` | passive | on | A few requests to api.github.com. |
+| `search_greynoise` | passive | on | Free community reputation lookup via GreyNoise for public IPs; quota varies. |
 | `search_ip` | passive | on | One request to ipinfo.io. |
 | `search_ip2location` | passive | on | One request to api.ip2location.io. |
+| `search_lens` | touches target | **off** | Opt-in SerpApi Google Lens lookup; sends public image URL to a third party and may cause it to fetch that image. Uses an optional SerpApi account key for live matches. |
 | `search_paste` | passive | on | One request to psbdmp.ws. |
 | `search_phone` | unverified | **off** | Runs phoneinfoga; what it sends over the network has not been verified with a traffic capture. |
 | `search_rdap` | passive | on | Queries IANA and the registry's RDAP server, not the target. |
@@ -444,6 +520,8 @@ This domain is for use in illustrative examples in documents.
 ```
 
 ### search_footprint
+
+**Search fallback:** if Bright Data keys are absent, the footprint command uses the existing SerpApi free-plan quota when available, with DuckDuckGo public HTML as fallback (no new paid API). Results are unverified leads and availability depends on DuckDuckGo. No automatic identity matching is claimed.
 
 Collects a target's public search-engine footprint via [Bright Data SERP API](https://get.brightdata.com/984ni58s2oad?utm_source=github&utm_medium=readme)¹. Detects entity type (email, username, domain, phone, or full name) and runs entity-type-aware Google queries, returning structured results plus Entity Correlation Graph nodes/edges for discovered domains and profiles. Requires `BRIGHTDATA_API_KEY` and `BRIGHTDATA_SERP_ZONE`.
 
@@ -933,7 +1011,7 @@ The port is published on `127.0.0.1` only, and the `Host` check is on (`OPENOSIN
   currently returns. A negative result (no breach found, no accounts found)
   means the source didn't report a match — not that no exposure exists.
 - **Most tools depend on third-party services you don't control.** Nine of
-  the 21 tools hard-require an API key and are subject to that provider's
+  the 29 tools hard-require an API key and are subject to that provider's
   uptime, rate limits, and pricing (Shodan, VirusTotal, Censys, AbuseIPDB,
   IP2Location, HaveIBeenPwned, and the three [Bright Data](https://get.brightdata.com/984ni58s2oad?utm_source=github&utm_medium=readme)¹–backed tools). Free
   tiers are small; heavy use requires a paid plan with the provider, not with
@@ -1023,3 +1101,5 @@ OpenOSINT is open source under the [MIT License](./LICENSE) — free for any use
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=OpenOSINT/OpenOSINT&type=Date)](https://star-history.com/#OpenOSINT/OpenOSINT&Date)
+
+Mac keyless menu: **Tools kiezen → Google Lens** accepts a public HTTPS image URL. It requests explicit consent before SerpApi fetches the image; the full response can be saved unshortened. Local photo paths remain manual-only (no automatic upload).

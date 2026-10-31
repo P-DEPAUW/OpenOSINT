@@ -17,7 +17,6 @@ import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -423,8 +422,7 @@ class TestSearchFootprintWebRegistration:
         entry = next(t for t in _TOOL_CATALOG if t["name"] == "search_footprint")
         assert entry["category"] == "Recon"
         assert entry["icon"] == "👣"
-        assert "BRIGHTDATA_API_KEY" in entry["requires_env"]
-        assert "BRIGHTDATA_SERP_ZONE" in entry["requires_env"]
+        assert entry["requires_env"] == []  # Existing free-plan/search fallback
         assert entry["requires_binary"] == []
         assert "input_label" in entry
         assert "input_placeholder" in entry
@@ -840,8 +838,8 @@ class TestTileProxy:
         assert r.content == ws._BLANK_TILE
 
     async def test_rate_limited_after_limit(self, http_client):
-        from openosint.web_server import _TILE_RL_MAX_REQS
         import openosint.web_server as ws
+        from openosint.web_server import _TILE_RL_MAX_REQS
 
         ws._tile_cache.clear()
         ws._TILE_RATE_STORE.clear()
@@ -906,8 +904,8 @@ class TestTileProxy:
     async def test_tile_bucket_is_separate_from_keyless_tool_bucket(self, http_client):
         """A globe pan (tile requests) must never 429 a keyless tool call
         sharing the same client IP, and vice versa — separate buckets."""
-        from openosint.web_server import _RL_MAX_REQS
         import openosint.web_server as ws
+        from openosint.web_server import _RL_MAX_REQS
 
         ws._tile_cache.clear()
         ws._TILE_RATE_STORE.clear()
@@ -1255,6 +1253,7 @@ class TestProxyExposureInvariant:
         self, loopback_client, monkeypatch, caplog
     ):
         import logging as _logging
+
         import openosint.web_server as ws
 
         monkeypatch.setattr(ws, "_proxy_warning_emitted", False)
@@ -1271,7 +1270,7 @@ class TestCreateAppFactoryRoutes:
 
     @pytest_asyncio.fixture
     async def factory_client(self):
-        from openosint.web_server import create_app, _RATE_STORE
+        from openosint.web_server import _RATE_STORE, create_app
 
         _RATE_STORE.clear()
         app = create_app()

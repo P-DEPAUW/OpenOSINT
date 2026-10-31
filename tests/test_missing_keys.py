@@ -24,7 +24,7 @@ def _no_keys(monkeypatch):
 
 
 def test_the_sweep_covers_every_credentialed_tool():
-    assert len(KEYED_TOOLS) == 9
+    assert len(KEYED_TOOLS) == 8
 
 
 @pytest.mark.parametrize(("tool", "required"), KEYED_TOOLS)
