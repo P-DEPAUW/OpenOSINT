@@ -127,7 +127,7 @@ def _all_tools() -> list[Tool]:
         Tool(name="file_metadata", description="Local read-only EXIF/metadata extraction via ExifTool for image, video or PDF. Can include GPS tags. No upload.", inputSchema=_with_json({"type":"object","properties":{"path":{"type":"string"}},"required":["path"]})),
         Tool(name="search_certificates", description="Read public certificate transparency records for a domain via crt.sh (free, no key). Historical leads, not current DNS.", inputSchema=_with_json({"type":"object","properties":{"domain":{"type":"string"}},"required":["domain"]})),
         Tool(name="search_archive", description="Read public historical URL captures through the Internet Archive Wayback CDX API (free, no key).", inputSchema=_with_json({"type":"object","properties":{"domain":{"type":"string"}},"required":["domain"]})),
-        Tool(name="search_lens", description="Opt-in live Google Lens reverse-image lookup via SerpApi. Sends a PUBLIC HTTPS image URL to SerpApi; needs a SerpApi account and active mode. Never uploads local files.", inputSchema=_with_json({"type":"object","properties":{"image_url":{"type":"string"}},"required":["image_url"]})),
+        Tool(name="search_lens", description="Opt-in live Google Lens reverse-image lookup via SerpApi. Accepts a public HTTPS image URL or a local JPG/PNG/WebP under 500 KB. With a local path the photo is uploaded to SerpApi; requires explicit active-mode permission and a configured key.", inputSchema=_with_json({"type":"object","properties":{"image_url":{"type":"string"}},"required":["image_url"]})),
         Tool(name="scan_host_ports", description="ACTIVE: limited 5-port Nmap TCP check on a host you own/are authorized to scan. Requires installed nmap and --allow-active; does not run in passive mode.", inputSchema=_with_json({"type":"object","properties":{"target":{"type":"string"}},"required":["target"]})),
         Tool(
             name="search_email",
@@ -698,14 +698,17 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> CallToolResult:
         else:
             text = result
         failed = (
-            name == "search_debian_osint"
-            and any(
+            (name == "search_debian_osint" and any(
                 marker in result
                 for marker in (
                     "Status: error", "Debian unavailable", "could not start",
                     "not executable", "timed out", "tool launch error",
                 )
-            )
+            ))
+            or (name == "search_paste" and result.startswith(("Scan error:", "Internal error:")))
+            or (name == "search_greynoise" and (
+                "Provider HTTP " in result or "Provider request failed" in result
+            ))
         )
         return CallToolResult(content=[TextContent(type="text", text=text)], isError=failed)
     except (KeyError, ValueError) as exc:

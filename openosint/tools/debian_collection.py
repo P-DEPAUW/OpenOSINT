@@ -144,9 +144,16 @@ def _execute(tool: str, target: str) -> str:
     )
     if check.returncode:
         return f"{tool}: the existing Debian binary is not executable."
+    # Parallels cannot launch the SpiderFoot shell wrapper directly, even
+    # though test -x succeeds; its real Python entrypoint works in the VM.
+    spiderfoot_entry = [
+        "/opt/owen/tools/OSINT/spiderfoot/.venv-linux/bin/python",
+        "/opt/owen/tools/OSINT/spiderfoot/sf.py",
+    ]
+    entry = spiderfoot_entry if tool == "spiderfoot" else [spec.executable]
     cmd = [
         ctl(), "exec", VM, "/usr/bin/env", f"PATH={GUEST_PATH}",
-        spec.executable, *arguments(tool, value),
+        *entry, *arguments(tool, value),
     ]
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=120, check=False)

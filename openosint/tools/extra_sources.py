@@ -12,6 +12,7 @@ import os
 import re
 import shutil
 import subprocess
+from pathlib import Path
 from urllib.parse import urlsplit
 
 import requests
@@ -130,11 +131,46 @@ async def run_archive_osint(domain: str, timeout_seconds: int = 20) -> str:
 
 
 def _lens_sync(image_url: str, timeout_seconds: int = 20) -> str:
-    image = _image_url(image_url)
+    """Real Lens lookup: a public HTTPS URL OR a local JPEG/PNG/WebP upload.
+
+    Local files are shared only with SerpApi; never hosted by this program.
+    """
+    if not isinstance(image_url, str) or not image_url.strip():
+        raise ValueError("Lens needs a public HTTPS image URL or a local photo.")
     key = os.environ.get("SERPAPI_API_KEY", "").strip()
     if not key:
-        return "Google Lens API not run: SERPAPI_API_KEY is missing. No image was uploaded or submitted."
-    data, err = _json_get("https://serpapi.com/search.json", params={"engine": "google_lens", "url": image, "type": "all", "api_key": key}, timeout_seconds=timeout_seconds)
+        return "Google Lens API not run: SERPAPI_API_KEY is missing. Nothing was uploaded."
+    search = {"engine": "google_lens", "type": "all", "api_key": key}
+    public_url = image_url.startswith("https://")
+    if public_url:
+        search["url"] = _image_url(image_url)
+    else:
+        source = Path(image_url).expanduser()
+        if not source.is_file() or source.suffix.lower() not in {".jpg", ".jpeg", ".png", ".webp"}:
+            raise ValueError("For uploads supply an existing local JPG, PNG or WebP photo.")
+        if source.stat().st_size > 500_000:
+            raise ValueError("SerpApi accepts up to 500 KB. Resize the local photo first.")
+        mime = "image/png" if source.suffix.lower() == ".png" else (
+            "image/webp" if source.suffix.lower() == ".webp" else "image/jpeg"
+        )
+        try:
+            with source.open("rb") as photo:
+                response = requests.post(
+                    "https://serpapi.com/image",
+                    files={"image": (source.name, photo, mime)},
+                    data={"api_key": key},
+                    timeout=(5, min(max(timeout_seconds, 6), 30)),
+                )
+            if response.status_code != 200 or len(response.content) > _MAX_BYTES:
+                return f"Lens upload failed (HTTP {response.status_code}); no search ran."
+            payload = response.json()
+        except (requests.RequestException, ValueError) as exc:
+            return f"Lens upload failed ({type(exc).__name__}); no search ran."
+        image_id = payload.get("image_id") if isinstance(payload, dict) else None
+        if not image_id:
+            return "Lens upload rejected; check SerpApi quota or image format."
+        search["image_id"] = image_id
+    data, err = _json_get("https://serpapi.com/search.json", params=search, timeout_seconds=timeout_seconds)
     if err:
         return f"Google Lens API: {err}"
     if not isinstance(data, dict):
@@ -145,7 +181,11 @@ def _lens_sync(image_url: str, timeout_seconds: int = 20) -> str:
     for match in data.get("visual_matches", [])[:20]:
         if isinstance(match, dict):
             matches.append({k: match.get(k) for k in ("title", "link", "source", "image", "exact_matches") if match.get(k) is not None})
-    return json.dumps({"source": "SerpApi Google Lens", "image_url": image, "matches": matches, "count": len(matches), "note": "Matches indicate visual similarity, not identity. The public image URL was sent to SerpApi; no local file was uploaded."}, ensure_ascii=False)
+    return json.dumps({
+        "source": "SerpApi Google Lens", "input_type": "public_url" if public_url else "local_upload",
+        "uploaded_to_serpapi": not public_url, "matches": matches, "count": len(matches),
+        "note": "Visual similarity is not identity. Local uploads are shared with SerpApi, not publicly hosted.",
+    }, ensure_ascii=False)
 
 
 async def run_lens_osint(image_url: str, timeout_seconds: int = 20) -> str:

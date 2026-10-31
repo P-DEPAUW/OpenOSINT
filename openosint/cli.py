@@ -288,7 +288,7 @@ def _build_parser() -> argparse.ArgumentParser:
         ("metadata", "Read local image/video/PDF metadata via ExifTool (no upload).", "FILE_PATH"),
         ("certs", "Certificate Transparency search (Cert Spotter/crt.sh).", "DOMAIN"),
         ("archive", "Historical URLs (Internet Archive CDX, no key).", "DOMAIN"),
-        ("lens", "Real Google Lens reverse-image results (SerpApi key + --allow-active).", "HTTPS_IMAGE_URL"),
+        ("lens", "Google Lens reverse-image: public URL or local JPG/PNG/WebP (SerpApi key + --allow-active; local files uploaded).", "IMAGE_URL_OR_LOCAL_PATH"),
         ("ports", "Authorized 5-port Nmap scan (requires --allow-active).", "TARGET"),
     ):
         cmd = subparsers.add_parser(name, help=help_text)
